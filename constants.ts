@@ -1,0 +1,84 @@
+
+import { Playlist, Track } from './types';
+
+export const MOCK_TRACKS: Track[] = [
+  {
+    id: '1',
+    title: 'Neon Drift',
+    artist: 'Lazerhawk',
+    album: 'Redline',
+    coverUrl: 'https://picsum.photos/seed/track1/400/400',
+    duration: 245,
+    genre: 'Synthwave',
+    mood: 'Energetic',
+    bpm: 120,
+  },
+  {
+    id: '2',
+    title: 'Midnight City',
+    artist: 'M83',
+    album: 'Hurry Up, We\'re Dreaming',
+    coverUrl: 'https://picsum.photos/seed/track2/400/400',
+    duration: 243,
+    genre: 'Indie Pop',
+    mood: 'Euphoric',
+    bpm: 105,
+  },
+  {
+    id: '3',
+    title: 'Weightless',
+    artist: 'Marconi Union',
+    album: 'Weightless',
+    coverUrl: 'https://picsum.photos/seed/track3/400/400',
+    duration: 480,
+    genre: 'Ambient',
+    mood: 'Calm',
+    bpm: 60,
+  },
+  {
+    id: '4',
+    title: 'Aerodynamic',
+    artist: 'Daft Punk',
+    album: 'Discovery',
+    coverUrl: 'https://picsum.photos/seed/track4/400/400',
+    duration: 207,
+    genre: 'French House',
+    mood: 'Energetic',
+    bpm: 123,
+  },
+];
+
+export const MOCK_PLAYLISTS: Playlist[] = [
+  {
+    id: 'p1',
+    name: 'Daily Cortex Mix',
+    description: 'Hyper-personalized for your morning flow.',
+    coverUrl: 'https://picsum.photos/seed/p1/400/400',
+    type: 'daily',
+    tracks: MOCK_TRACKS,
+  },
+  {
+    id: 'p2',
+    name: 'Focus Flow',
+    description: 'A deep dive into ambient and lofi textures.',
+    coverUrl: 'https://picsum.photos/seed/p2/400/400',
+    type: 'mood',
+    tracks: [MOCK_TRACKS[2]],
+  },
+  {
+    id: 'p3',
+    name: 'Weekly Discovery',
+    description: 'Fresh tracks picked by the AI engine.',
+    coverUrl: 'https://picsum.photos/seed/p3/400/400',
+    type: 'weekly',
+    tracks: MOCK_TRACKS,
+  },
+  {
+    id: 'p4',
+    name: 'Late Night Synthesis',
+    description: 'Chill synth textures for the evening.',
+    coverUrl: 'https://picsum.photos/seed/p4/400/400',
+    type: 'custom',
+    tracks: [MOCK_TRACKS[0]],
+  },
+];
