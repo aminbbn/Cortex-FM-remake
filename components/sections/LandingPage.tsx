@@ -1,10 +1,10 @@
 
-import React from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, useScroll, useTransform, useSpring, AnimatePresence } from 'framer-motion';
 import { 
-  Mic, ArrowRight, Sparkles, ShieldCheck, Zap, Globe, 
-  Layers, Cpu, Database, Share2, Activity,
-  PlayCircle, Fingerprint, Waves
+  Mic, ArrowRight, Activity, Cpu, Fingerprint, 
+  Waves, Layers, ShieldCheck, Zap, Globe, Database, 
+  ChevronDown, Disc
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 
@@ -12,176 +12,350 @@ interface LandingPageProps {
   onEnter: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
-  const { scrollYProgress } = useScroll();
-  const backgroundY = useTransform(scrollYProgress, [0, 1], ['0%', '20%']);
-  const navOpacity = useTransform(scrollYProgress, [0, 0.05], [1, 0.9]);
+// --- SUB-COMPONENTS ---
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 40 },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
-      transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] } 
-    }
-  };
-
-  const discoveryItems = [...Array(8)].map((_, i) => ({
-    id: i,
-    title: `Synthesis ${i + 1}`,
-    seed: `mix-${i}`
-  }));
-  const duplicatedItems = [...discoveryItems, ...discoveryItems];
-
+const Marquee: React.FC = () => {
   return (
-    <motion.div 
-      initial="hidden"
-      animate="visible"
-      exit={{ opacity: 0, scale: 0.95, filter: 'blur(30px)' }}
-      className="relative h-full w-full overflow-y-auto scroll-smooth overflow-x-hidden bg-background flex flex-col items-center selection:bg-accent selection:text-background"
-    >
-      {/* --- NEURAL FIELD BACKGROUND --- */}
-      <motion.div style={{ y: backgroundY }} className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-accent/15 rounded-full blur-[120px] animate-pulse" />
-          <div className="absolute bottom-[10%] right-[-5%] w-[40%] h-[40%] bg-accent/5 rounded-full blur-[150px]" />
-        </div>
-        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, #BFC1C2 1px, transparent 1px)', backgroundSize: '50px 50px' }} />
-        {[...Array(5)].map((_, i) => (
-          <motion.div
-            key={i}
-            animate={{
-              y: [0, -60, 0],
-              opacity: [0.05, 0.2, 0.05]
-            }}
-            transition={{ duration: 10 + i * 2, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bg-accent/20 rounded-full blur-3xl"
-            style={{
-              width: 300 + i * 100,
-              height: 300 + i * 100,
-              left: `${(i * 20) % 100}%`,
-              top: `${(i * 30) % 100}%`,
-            }}
-          />
+    <div className="relative flex overflow-hidden border-y border-white/5 py-6 bg-surface/30 backdrop-blur-sm">
+      <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background z-10 pointer-events-none" />
+      <motion.div 
+        className="flex gap-12 whitespace-nowrap"
+        animate={{ x: "-50%" }}
+        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+      >
+        {[...Array(4)].map((_, i) => (
+          <span key={i} className="flex gap-12 text-xs font-mono font-bold text-accent/50 tracking-[0.2em]">
+            <span>SPECTRAL GATING</span>
+            <span>•</span>
+            <span>LIBROSA ENGINE</span>
+            <span>•</span>
+            <span>24-BIT AUDIO</span>
+            <span>•</span>
+            <span>VECTOR EMBEDDINGS</span>
+            <span>•</span>
+            <span>REAL-TIME ANALYSIS</span>
+            <span>•</span>
+            <span>NEURAL NETWORKS</span>
+            <span>•</span>
+          </span>
         ))}
       </motion.div>
+    </div>
+  );
+};
 
-      {/* --- NAVIGATION --- */}
-      <motion.header style={{ opacity: navOpacity }} className="fixed z-[100] top-0 w-full px-8 py-6 flex justify-between items-center bg-background/30 backdrop-blur-xl border-b border-white/5">
+const BentoCard: React.FC<{ 
+  children: React.ReactNode; 
+  className?: string; 
+  title: string;
+  icon?: React.ReactNode;
+  delay?: number;
+}> = ({ children, className = "", title, icon, delay = 0 }) => (
+  <motion.div 
+    initial={{ opacity: 0, y: 20 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, margin: "-50px" }}
+    transition={{ duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
+    className={`group relative overflow-hidden rounded-[2rem] bg-white/5 border border-white/10 backdrop-blur-md hover:border-accent/30 transition-colors duration-500 ${className}`}
+  >
+    <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+    <div className="relative z-10 p-8 h-full flex flex-col">
+      <div className="flex items-center gap-3 mb-4 text-accent/70">
+        {icon}
+        <h3 className="text-xs font-black uppercase tracking-[0.2em]">{title}</h3>
+      </div>
+      <div className="flex-1">{children}</div>
+    </div>
+  </motion.div>
+);
+
+// --- MAIN COMPONENT ---
+
+export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ container: containerRef });
+  const smoothProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
+  
+  // Parallax & Opacity transforms
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
+  const heroScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
+  const bgY = useTransform(scrollYProgress, [0, 1], ['0%', '30%']);
+  
+  // Scrollytelling State
+  const [activeStep, setActiveStep] = useState(0);
+
+  return (
+    <div 
+      ref={containerRef}
+      className="relative h-full w-full bg-background text-text-primary selection:bg-accent selection:text-background font-sans overflow-y-auto overflow-x-hidden"
+    >
+      
+      {/* Global Noise Overlay */}
+      <div className="fixed inset-0 z-[60] pointer-events-none opacity-[0.03] mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
+
+      {/* Progress Bar */}
+      <motion.div style={{ scaleX: smoothProgress }} className="fixed top-0 left-0 right-0 h-1 bg-accent z-[100] origin-left" />
+
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-[90] px-8 py-6 flex justify-between items-center bg-background/0 backdrop-blur-sm border-b border-white/[0.02]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(191,193,194,0.3)]">
-            <Mic size={22} className="text-background" />
+          <div className="w-8 h-8 bg-accent rounded-[10px] flex items-center justify-center shadow-[0_0_15px_rgba(191,193,194,0.2)]">
+            <Mic size={16} className="text-background" />
           </div>
-          <span className="text-xl font-black tracking-tighter uppercase">Cortex FM</span>
+          <span className="text-sm font-black tracking-tighter uppercase hidden sm:block">Cortex FM</span>
         </div>
-        <div className="hidden md:flex items-center gap-10">
-          {['Vision', 'Engine', 'Docs'].map((link) => (
-            <a key={link} href={`#${link.toLowerCase()}`} className="text-[11px] font-black uppercase tracking-[0.3em] text-text-secondary hover:text-accent transition-all">{link}</a>
-          ))}
-          <Button variant="primary" size="sm" onClick={onEnter} className="rounded-full px-8">Launch App</Button>
-        </div>
-      </motion.header>
+        <Button size="sm" onClick={onEnter} className="shadow-2xl shadow-accent/20">Launch App</Button>
+      </nav>
 
-      {/* --- HERO SECTION --- */}
-      <section className="relative z-10 w-full max-w-6xl px-8 pt-64 pb-48 flex flex-col items-center text-center">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="mb-10">
-          <span className="px-6 py-2.5 rounded-full bg-accent/5 border border-accent/10 text-accent text-[10px] font-black tracking-[0.4em] uppercase flex items-center gap-4 shadow-[0_0_40px_rgba(191,193,194,0.05)]">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
-            </span>
-            Neural Synthesis Active
-          </span>
+      {/* --- SECTION A: HERO --- */}
+      <section className="relative h-screen flex flex-col items-center justify-center overflow-hidden pt-20">
+        <motion.div style={{ y: bgY, opacity: heroOpacity, scale: heroScale }} className="absolute inset-0 z-0">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] bg-accent/5 rounded-full blur-[120px] animate-pulse duration-[4s]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#0D0D0F_100%)]" />
         </motion.div>
-        <motion.h1 variants={itemVariants} initial="hidden" animate="visible" className="text-8xl md:text-[11rem] font-black tracking-tighter mb-10 leading-[0.8] text-transparent bg-clip-text bg-gradient-to-b from-text-primary via-text-primary to-text-secondary/20">
-          SONIC<br />EVOLUTION.
-        </motion.h1>
-        <motion.p variants={itemVariants} initial="hidden" animate="visible" className="text-lg md:text-2xl text-text-secondary max-w-2xl mb-16 leading-relaxed font-medium opacity-80">
-          The ultimate personal music vault. Cortex FM deconstructs your collection to curate the impossible, every single day.
-        </motion.p>
-        <motion.div variants={itemVariants} initial="hidden" animate="visible" className="flex flex-col sm:flex-row gap-8">
-          <Button size="lg" className="group px-16 py-7 rounded-full shadow-[0_0_60px_rgba(191,193,194,0.1)]" onClick={onEnter}>
-            Enter the Vault <ArrowRight className="ml-2 group-hover:translate-x-2 transition-transform" />
-          </Button>
-          <Button variant="ghost" size="lg" className="rounded-full px-16 border border-accent/10 hover:border-accent/30">Whitepaper</Button>
+
+        <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="mb-8 flex justify-center"
+          >
+            <span className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono text-accent uppercase tracking-widest flex items-center gap-3 backdrop-blur-md">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
+              </span>
+              System Version 4.0.2 Live
+            </span>
+          </motion.div>
+
+          <motion.h1 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+            className="text-7xl md:text-9xl lg:text-[11rem] font-black tracking-tighter leading-[0.85] mb-8 text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/40"
+          >
+            SONIC<br />EVOLUTION
+          </motion.h1>
+
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, duration: 1 }}
+            className="text-lg md:text-xl text-text-secondary max-w-xl mx-auto font-medium leading-relaxed"
+          >
+            The ultimate personal music vault. Cortex FM deconstructs your collection to curate the impossible, every single day.
+          </motion.p>
+        </div>
+
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1, duration: 1 }}
+          className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4"
+        >
+          <span className="text-[10px] uppercase tracking-[0.3em] text-text-secondary/50">Scroll to Explore</span>
+          <motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>
+            <ChevronDown className="text-text-secondary/50" />
+          </motion.div>
         </motion.div>
       </section>
 
-      {/* --- THE ENGINE SECTION --- */}
-      <section id="engine" className="relative z-10 w-full max-w-7xl px-8 pb-56">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-32 items-center">
-          <motion.div whileInView={{ opacity: 1, x: 0 }} initial={{ opacity: 0, x: -50 }} viewport={{ once: true }} className="space-y-12">
-            <div className="inline-flex p-5 bg-accent/10 rounded-3xl text-accent border border-accent/20"><Cpu size={48} /></div>
-            <h2 className="text-7xl font-black tracking-tight leading-none">Atomic<br /><span className="text-text-secondary opacity-30">Analysis.</span></h2>
-            <p className="text-text-secondary text-xl leading-relaxed max-w-md">Our engine identifies thousands of hidden attributes in your tracks, from harmonic tension to spectral resonance.</p>
-            <div className="space-y-6">
+      {/* --- SECTION B: NEURAL PROCESS (SCROLLYTELLING) --- */}
+      <section className="relative w-full bg-background py-32 border-t border-white/5">
+        <div className="max-w-7xl mx-auto px-8 lg:px-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
+            
+            {/* Left Column: Scrolling Text */}
+            <div className="flex flex-col gap-[50vh] py-[20vh]">
               {[
-                { icon: <Fingerprint />, label: "Audio DNA", value: "Locked" },
-                { icon: <Waves />, label: "Spectral Mapping", value: "24-bit" },
-                { icon: <Activity />, label: "Mood Topology", value: "Active" }
-              ].map((spec, i) => (
-                <div key={i} className="flex items-center justify-between p-6 glass rounded-3xl border-white/5 hover:border-white/10 transition-all">
-                  <div className="flex items-center gap-5 text-xs font-black uppercase tracking-[0.3em]"><span className="text-accent">{spec.icon}</span>{spec.label}</div>
-                  <span className="text-accent font-mono text-xs">{spec.value}</span>
-                </div>
+                { title: "Ingestion", desc: "Drag and drop your audio files. Our secure vault accepts FLAC, WAV, and MP3, preserving every bit of data." },
+                { title: "Decomposition", desc: "The engine breaks down tracks into 4,000+ vector points, analyzing BPM, key, timbre, and emotional density." },
+                { title: "Curating", desc: "Neural networks reassemble your library into hyper-personalized flows that adapt to your circadian rhythm." }
+              ].map((step, idx) => (
+                <motion.div 
+                  key={idx}
+                  onViewportEnter={() => setActiveStep(idx)}
+                  viewport={{ root: containerRef, margin: "-50% 0px -50% 0px" }}
+                  className="relative pl-8 border-l-2 border-white/10"
+                >
+                   <motion.div 
+                    animate={{ height: activeStep === idx ? "100%" : "0%" }}
+                    className="absolute left-[-2px] top-0 w-[2px] bg-accent transition-all duration-500"
+                  />
+                  <h3 className={`text-6xl font-black mb-6 transition-colors duration-500 ${activeStep === idx ? 'text-white' : 'text-white/20'}`}>
+                    0{idx + 1}.<br/>{step.title}
+                  </h3>
+                  <p className={`text-xl leading-relaxed max-w-md transition-colors duration-500 ${activeStep === idx ? 'text-text-secondary' : 'text-text-secondary/20'}`}>
+                    {step.desc}
+                  </p>
+                </motion.div>
               ))}
             </div>
-          </motion.div>
 
-          <motion.div whileInView={{ opacity: 1, scale: 1 }} initial={{ opacity: 0, scale: 0.9 }} viewport={{ once: true }} className="relative aspect-square glass rounded-[5rem] flex items-center justify-center p-20 shadow-[0_0_100px_rgba(0,0,0,0.4)]">
-            <div className="absolute inset-0 bg-gradient-to-tr from-accent/10 via-transparent to-accent/5" />
-            <div className="absolute w-[85%] h-[85%] border border-dashed border-accent/20 rounded-full animate-[spin_40s_linear_infinite]" />
-            <div className="absolute w-[60%] h-[60%] border border-dashed border-accent/10 rounded-full animate-[spin_25s_linear_infinite_reverse]" />
-            <div className="relative z-10 p-10 rounded-full bg-background/80 border border-accent/20 shadow-[0_0_50px_rgba(191,193,194,0.15)]">
-              <Mic size={64} className="text-accent" />
-            </div>
-          </motion.div>
-        </div>
-      </section>
+            {/* Right Column: Sticky Visualization */}
+            <div className="hidden lg:block relative h-full">
+              <div className="sticky top-[20vh] h-[60vh] flex items-center justify-center">
+                <div className="relative w-full aspect-square max-w-md bg-white/5 rounded-[3rem] border border-white/10 backdrop-blur-xl flex items-center justify-center overflow-hidden shadow-2xl">
+                  {/* Step 1 Visual */}
+                  <motion.div 
+                    animate={{ opacity: activeStep === 0 ? 1 : 0, scale: activeStep === 0 ? 1 : 0.8 }}
+                    transition={{ duration: 0.5 }}
+                    className="absolute inset-0 flex items-center justify-center"
+                  >
+                    <Disc size={120} className="text-accent animate-spin-slow" />
+                    <div className="absolute inset-0 bg-accent/20 blur-[60px]" />
+                  </motion.div>
 
-      {/* --- DAILY SYNTHESIS (FIXED INFINITE SCROLL) --- */}
-      <section className="relative z-10 w-full overflow-hidden pb-56">
-        <div className="max-w-7xl mx-auto px-8 mb-24 text-center">
-          <h2 className="text-7xl font-black mb-6 tracking-tighter">The Daily Synthesis.</h2>
-          <p className="text-text-secondary uppercase tracking-[0.6em] text-[10px] font-black opacity-60">Infinite variations based on your core vault.</p>
-        </div>
-        
-        <div className="relative w-full overflow-hidden py-10" style={{ maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}>
-          <motion.div animate={{ x: [0, -discoveryItems.length * 352] }} transition={{ duration: 40, repeat: Infinity, ease: "linear" }} className="flex gap-8 px-4">
-            {duplicatedItems.map((item, i) => (
-              <div key={i} className="flex-shrink-0 w-80">
-                <div className="aspect-[4/5] glass rounded-[3rem] p-10 border-white/5 hover:border-accent/30 transition-all duration-700 group relative overflow-hidden">
-                  <img src={`https://picsum.photos/seed/${item.seed}/500/600`} className="absolute inset-0 w-full h-full object-cover opacity-30 grayscale group-hover:grayscale-0 group-hover:opacity-70 group-hover:scale-110 transition-all duration-1000" />
-                  <div className="relative z-20 h-full flex flex-col justify-end">
-                    <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                      <p className="text-[10px] font-black text-accent uppercase tracking-[0.4em] mb-4 opacity-0 group-hover:opacity-100 transition-all">Match: 99%</p>
-                      <h4 className="text-3xl font-black tracking-tight">{item.title}</h4>
-                      <div className="h-1 w-12 bg-accent mt-4 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500" />
+                  {/* Step 2 Visual */}
+                  <motion.div 
+                    animate={{ opacity: activeStep === 1 ? 1 : 0, scale: activeStep === 1 ? 1 : 1.2 }}
+                    transition={{ duration: 0.5 }}
+                    className="absolute inset-0 flex items-center justify-center"
+                  >
+                    <div className="grid grid-cols-4 gap-4">
+                      {[...Array(16)].map((_, i) => (
+                        <motion.div 
+                          key={i}
+                          animate={{ height: [20, 40 + Math.random() * 40, 20] }}
+                          transition={{ duration: 1 + Math.random(), repeat: Infinity }}
+                          className="w-4 bg-accent/50 rounded-full"
+                        />
+                      ))}
                     </div>
-                  </div>
+                  </motion.div>
+
+                  {/* Step 3 Visual */}
+                  <motion.div 
+                    animate={{ opacity: activeStep === 2 ? 1 : 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="absolute inset-0 flex items-center justify-center"
+                  >
+                     <div className="absolute w-[80%] h-[80%] border border-dashed border-accent/30 rounded-full animate-spin-reverse-slow" />
+                     <div className="absolute w-[60%] h-[60%] border border-accent/50 rounded-full animate-pulse" />
+                     <Mic size={64} className="text-white relative z-10" />
+                  </motion.div>
                 </div>
               </div>
-            ))}
-          </motion.div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* --- FOOTER --- */}
-      <footer className="relative z-10 w-full py-32 px-8 border-t border-white/5 bg-background/50 backdrop-blur-3xl text-center">
-        <div className="max-w-7xl mx-auto flex flex-col items-center gap-16">
-          <div className="flex flex-col items-center gap-6">
-            <div className="w-14 h-14 bg-accent rounded-2xl flex items-center justify-center shadow-2xl mb-4"><Mic size={28} className="text-background" /></div>
-            <h3 className="text-3xl font-black uppercase tracking-tighter">Cortex FM</h3>
-            <p className="text-text-secondary text-xs font-black uppercase tracking-[0.5em] opacity-40">Designed for Discerning Listeners.</p>
-          </div>
-          <div className="flex gap-12 text-[10px] font-black uppercase tracking-[0.3em] text-text-secondary">
-            <a href="#" className="hover:text-accent transition-all">Privacy</a>
-            <a href="#" className="hover:text-accent transition-all">Terms</a>
-            <a href="#" className="hover:text-accent transition-all">Security</a>
-          </div>
-          <p className="text-text-secondary/20 text-[10px] uppercase font-black tracking-[1em]">© 2025 • Cortex FM Global</p>
+      {/* --- SECTION D: TECH MARQUEE --- */}
+      <section className="py-20">
+        <Marquee />
+      </section>
+
+      {/* --- SECTION C: BENTO GRID --- */}
+      <section className="py-32 px-8 max-w-[1400px] mx-auto">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ root: containerRef, once: true }}
+          transition={{ duration: 0.8 }}
+          className="text-center mb-20"
+        >
+          <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter mb-6">System Modules</h2>
+          <p className="text-text-secondary uppercase tracking-widest text-sm">Engineered for perfection</p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[300px]">
+          {/* Card 1: Universal Sync (Large) */}
+          <BentoCard title="Universal Sync" icon={<Globe size={18} />} className="md:col-span-2 relative group" delay={0.1}>
+            <div className="h-full flex flex-col justify-between relative z-10">
+              <h4 className="text-4xl font-bold max-w-md leading-tight mt-4">Seamlessly bridge your local files with the cloud.</h4>
+              <div className="flex gap-4 mt-8">
+                <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    whileInView={{ width: "100%" }}
+                    viewport={{ root: containerRef }}
+                    transition={{ duration: 2, ease: "easeInOut" }}
+                    className="h-full bg-accent"
+                  />
+                </div>
+              </div>
+            </div>
+            <Globe className="absolute -right-10 -bottom-10 text-white/5 rotate-12 transition-transform duration-700 group-hover:scale-110 group-hover:rotate-0" size={300} />
+          </BentoCard>
+
+          {/* Card 2: The Daily Mix (Tall) */}
+          <BentoCard title="The Daily Mix" icon={<Activity size={18} />} className="md:row-span-2 bg-gradient-to-b from-white/5 to-accent/5" delay={0.2}>
+            <div className="space-y-4 mt-6">
+               {[1, 2, 3, 4, 5].map((item) => (
+                 <div key={item} className="flex items-center gap-4 p-3 rounded-xl bg-black/20 border border-white/5 backdrop-blur-md">
+                   <div className="w-10 h-10 bg-white/10 rounded-lg animate-pulse" />
+                   <div className="space-y-2 flex-1">
+                     <div className="h-2 w-20 bg-white/20 rounded-full" />
+                     <div className="h-2 w-12 bg-white/10 rounded-full" />
+                   </div>
+                 </div>
+               ))}
+            </div>
+            <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#161618] to-transparent pointer-events-none" />
+          </BentoCard>
+
+          {/* Card 3: Lossless Audio */}
+          <BentoCard title="Lossless Audio" icon={<Waves size={18} />} delay={0.3}>
+            <div className="flex items-center justify-center h-full">
+              <span className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20">
+                FLAC
+              </span>
+            </div>
+          </BentoCard>
+
+          {/* Card 4: Privacy Locked */}
+          <BentoCard title="Privacy Locked" icon={<ShieldCheck size={18} />} delay={0.4}>
+            <div className="flex flex-col justify-end h-full">
+              <p className="text-text-secondary text-sm font-medium leading-relaxed">
+                Your data never leaves the vault. Analysis happens locally or in an encrypted enclave.
+              </p>
+            </div>
+          </BentoCard>
         </div>
+      </section>
+
+      {/* --- SECTION E: MANIFESTO & CTA --- */}
+      <section className="min-h-screen flex flex-col items-center justify-center text-center px-8 relative overflow-hidden">
+         {/* Background Glow */}
+         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] bg-accent/5 rounded-full blur-[150px] pointer-events-none" />
+
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ root: containerRef }}
+          transition={{ duration: 1 }}
+          className="relative z-10 max-w-5xl"
+        >
+          <h2 className="text-6xl md:text-8xl lg:text-[7rem] font-black tracking-tighter leading-[0.9] mb-16">
+            THE ALGORITHM<br/>
+            FOLLOWS THE CROWD.<br/>
+            <span className="text-accent">CORTEX FOLLOWS YOU.</span>
+          </h2>
+          
+          <div className="flex flex-col items-center gap-8">
+            <Button 
+              size="lg" 
+              onClick={onEnter} 
+              className="px-12 py-8 text-lg rounded-[1.5rem] bg-accent hover:bg-white text-background shadow-[0_0_80px_rgba(191,193,194,0.3)] hover:shadow-[0_0_120px_rgba(255,255,255,0.5)] transition-all duration-500 scale-100 hover:scale-105"
+            >
+              Initialize Vault <ArrowRight className="ml-3" />
+            </Button>
+            <span className="text-xs font-mono text-text-secondary/50 uppercase tracking-widest">
+              Limited Access • V4.0.2 • Encrypted
+            </span>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* --- FOOTER SIMPLE --- */}
+      <footer className="py-12 border-t border-white/5 bg-background text-center">
+        <p className="text-[10px] text-text-secondary/30 uppercase tracking-[0.5em] font-bold">
+          © 2025 Cortex FM • Crafted for the Future
+        </p>
       </footer>
-    </motion.div>
+    </div>
   );
 };

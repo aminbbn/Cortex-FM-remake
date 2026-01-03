@@ -9,6 +9,25 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
+  const containerVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.5,
+        duration: 0.6,
+        ease: [0.22, 1, 0.36, 1]
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, x: -10 },
+    visible: { opacity: 1, x: 0 }
+  };
+
   const menuItems = [
     { id: 'home', icon: Home, label: 'Home' },
     { id: 'discover', icon: Search, label: 'Discover' },
@@ -22,63 +41,72 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
   ];
 
   return (
-    <aside className="w-64 h-full bg-surface/50 border-r border-accent/5 flex flex-col p-6 hidden lg:flex">
-      <div className="flex items-center gap-3 mb-10">
-        <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center">
-          <Mic size={18} className="text-background" />
+    <motion.aside 
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="w-72 h-full bg-surface/30 backdrop-blur-3xl border-r border-white/5 flex flex-col p-8 hidden lg:flex"
+    >
+      <motion.div variants={itemVariants} className="flex items-center gap-4 mb-14">
+        <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center shadow-xl">
+          <Mic size={22} className="text-background" />
         </div>
-        <h1 className="text-xl font-bold tracking-tight text-text-primary uppercase">Cortex FM</h1>
-      </div>
+        <h1 className="text-xl font-black tracking-tighter text-text-primary uppercase">Cortex FM</h1>
+      </motion.div>
 
-      <nav className="flex-1 space-y-8">
-        <div>
-          <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-widest mb-4 px-3">Menu</h2>
-          <ul className="space-y-1">
+      <nav className="flex-1 space-y-12">
+        <motion.div variants={itemVariants}>
+          <h2 className="text-[10px] font-black text-text-secondary uppercase tracking-[0.4em] mb-6 px-4 opacity-40">Menu</h2>
+          <ul className="space-y-2">
             {menuItems.map((item) => (
-              <li key={item.id}>
+              <motion.li key={item.id} variants={itemVariants}>
                 <button
                   onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${
-                    activeTab === item.id ? 'bg-accent/10 text-accent' : 'text-text-secondary hover:text-text-primary hover:bg-surface'
+                  className={`w-full flex items-center gap-4 px-4 py-3 rounded-[13px] transition-all duration-300 group ${
+                    activeTab === item.id 
+                      ? 'bg-accent/10 text-accent border border-accent/20 shadow-lg' 
+                      : 'text-text-secondary hover:text-text-primary hover:bg-surface/50 border border-transparent'
                   }`}
                 >
-                  <item.icon size={20} className={activeTab === item.id ? 'text-accent' : 'group-hover:text-text-primary'} />
-                  <span className="font-medium">{item.label}</span>
+                  <item.icon size={20} className={activeTab === item.id ? 'text-accent' : 'group-hover:text-text-primary transition-colors'} />
+                  <span className="text-sm font-black uppercase tracking-widest">{item.label}</span>
                 </button>
-              </li>
+              </motion.li>
             ))}
           </ul>
-        </div>
+        </motion.div>
 
-        <div>
-          <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-widest mb-4 px-3">Library</h2>
-          <ul className="space-y-1">
+        <motion.div variants={itemVariants}>
+          <h2 className="text-[10px] font-black text-text-secondary uppercase tracking-[0.4em] mb-6 px-4 opacity-40">Library</h2>
+          <ul className="space-y-2">
             {libraryItems.map((item) => (
-              <li key={item.id}>
+              <motion.li key={item.id} variants={itemVariants}>
                 <button
                   onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${
-                    activeTab === item.id ? 'bg-accent/10 text-accent' : 'text-text-secondary hover:text-text-primary hover:bg-surface'
+                  className={`w-full flex items-center gap-4 px-4 py-3 rounded-[13px] transition-all duration-300 group ${
+                    activeTab === item.id 
+                      ? 'bg-accent/10 text-accent border border-accent/20 shadow-lg' 
+                      : 'text-text-secondary hover:text-text-primary hover:bg-surface/50 border border-transparent'
                   }`}
                 >
-                  <item.icon size={20} className={activeTab === item.id ? 'text-accent' : 'group-hover:text-text-primary'} />
-                  <span className="font-medium">{item.label}</span>
+                  <item.icon size={20} className={activeTab === item.id ? 'text-accent' : 'group-hover:text-text-primary transition-colors'} />
+                  <span className="text-sm font-black uppercase tracking-widest">{item.label}</span>
                 </button>
-              </li>
+              </motion.li>
             ))}
           </ul>
-        </div>
+        </motion.div>
       </nav>
 
-      <div className="mt-auto border-t border-accent/5 pt-6">
+      <motion.div variants={itemVariants} className="mt-auto border-t border-white/5 pt-8">
         <button
           onClick={() => setActiveTab('settings')}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-all duration-200"
+          className="w-full flex items-center gap-4 px-4 py-3 rounded-[13px] text-text-secondary hover:text-text-primary hover:bg-surface/50 transition-all duration-300 group border border-transparent"
         >
-          <Settings size={20} />
-          <span className="font-medium">Settings</span>
+          <Settings size={20} className="group-hover:rotate-45 transition-transform duration-500" />
+          <span className="text-sm font-black uppercase tracking-widest">Settings</span>
         </button>
-      </div>
-    </aside>
+      </motion.div>
+    </motion.aside>
   );
 };

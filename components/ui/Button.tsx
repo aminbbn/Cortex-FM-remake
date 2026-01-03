@@ -14,25 +14,25 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
   ...props
 }) => {
-  const baseStyles = "inline-flex items-center justify-center font-medium transition-all duration-300 rounded-lg focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed";
+  const baseStyles = "inline-flex items-center justify-center font-bold tracking-tight transition-all duration-300 rounded-[13px] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed uppercase text-[11px] tracking-[0.15em]";
   
   const variants = {
-    primary: "bg-accent text-background hover:bg-accent-hover active:scale-95",
-    secondary: "border border-accent/20 text-text-primary hover:bg-surface active:scale-95",
-    ghost: "text-text-secondary hover:text-text-primary hover:bg-surface active:scale-95",
-    destructive: "bg-destructive text-white hover:opacity-90 active:scale-95",
+    primary: "bg-accent text-background hover:bg-white active:scale-95 shadow-lg shadow-accent/10",
+    secondary: "bg-surface border border-white/10 text-text-primary hover:border-accent/40 active:scale-95",
+    ghost: "text-text-secondary hover:text-text-primary hover:bg-surface/50 active:scale-95",
+    destructive: "bg-destructive text-white hover:opacity-90 active:scale-95 shadow-lg shadow-destructive/20",
   };
 
   const sizes = {
-    sm: "px-3 py-1.5 text-sm",
-    md: "px-6 py-2.5 text-base",
-    lg: "px-8 py-3.5 text-lg",
-    icon: "p-2 aspect-square",
+    sm: "px-5 py-2.5",
+    md: "px-8 py-3.5",
+    lg: "px-12 py-5 text-sm",
+    icon: "p-3 aspect-square",
   };
 
   return (
     <motion.button
-      whileTap={{ scale: 0.98 }}
+      whileTap={{ scale: 0.97 }}
       className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >

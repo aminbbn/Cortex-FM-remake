@@ -19,37 +19,48 @@ const AppContent: React.FC = () => {
       case 'library':
         return <Library key="library" />;
       default:
-        return <Dashboard key="dashboard" />;
+        return (
+          <div className="flex flex-col items-center justify-center h-full opacity-50 space-y-4">
+            <motion.div 
+              initial={{ scale: 0.9 }} 
+              animate={{ scale: 1 }} 
+              className="text-2xl font-black uppercase tracking-widest italic"
+            >
+              Cortex Engine Under Maintenance
+            </motion.div>
+            <p className="text-xs uppercase tracking-[0.5em]">Module: {activeTab}</p>
+          </div>
+        );
     }
   };
 
   const enterApp = () => setView('app');
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-background text-text-primary font-sans">
+    <div className="relative h-screen w-screen overflow-hidden bg-background text-text-primary font-sans selection:bg-accent selection:text-background">
       <AnimatePresence mode="wait">
         {view === 'landing' ? (
           <LandingPage onEnter={enterApp} />
         ) : (
           <motion.div 
             key="app-main"
-            initial={{ opacity: 0, scale: 1.1, filter: 'blur(20px)' }}
+            initial={{ opacity: 0, scale: 1.05, filter: 'blur(10px)' }}
             animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-            transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
             className="flex h-full w-full"
           >
             {/* Sidebar - Navigation */}
             <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
             {/* Main Content Area */}
-            <main className="flex-1 overflow-y-auto pb-32 pt-8 px-6 md:px-12">
+            <main className="flex-1 overflow-y-auto pb-48 pt-12 px-8 md:px-20 lg:px-24">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTab}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.4, ease: [0.25, 0.8, 0.25, 1] }}
+                  initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 1.02 }}
+                  transition={{ duration: 0.5, ease: [0.25, 0.8, 0.25, 1] }}
                 >
                   {renderContent()}
                 </motion.div>

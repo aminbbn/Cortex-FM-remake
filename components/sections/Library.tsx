@@ -19,6 +19,26 @@ export const Library: React.FC = () => {
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05,
+        delayChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 15 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { type: "spring", stiffness: 120, damping: 20 }
+    }
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -29,7 +49,6 @@ export const Library: React.FC = () => {
 
   const simulateUpload = (file: File) => {
     const id = Math.random().toString(36).substr(2, 9);
-    // Create a local URL for playback
     const audioUrl = URL.createObjectURL(file);
 
     const newUpload: UploadItem = {
@@ -54,7 +73,6 @@ export const Library: React.FC = () => {
           )
         );
 
-        // Simulate Cortex AI Analysis
         setTimeout(() => {
           const newTrack: Track = {
             id: `uploaded-${Date.now()}-${id}`,
@@ -62,8 +80,8 @@ export const Library: React.FC = () => {
             artist: "Vault User",
             album: "Personal Synthesis",
             coverUrl: `https://picsum.photos/seed/${id}/400/400`,
-            audioUrl: audioUrl, // STORES REAL BLOB URL
-            duration: 180, // Default duration, updated by audio element later if needed
+            audioUrl: audioUrl,
+            duration: 180,
             genre: ["Liquid D&B", "Synthwave", "Ambient", "Indie"][Math.floor(Math.random() * 4)],
             mood: ["Energetic", "Calm", "Euphoric", "Focus"][Math.floor(Math.random() * 4)],
             bpm: 80 + Math.floor(Math.random() * 80),
@@ -77,7 +95,6 @@ export const Library: React.FC = () => {
             )
           );
 
-          // Auto-remove after 3 seconds
           setTimeout(() => {
             setUploads((prev) => prev.filter((up) => up.id !== id));
           }, 3000);
@@ -108,7 +125,12 @@ export const Library: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-full space-y-8">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="relative min-h-full space-y-12"
+    >
       <input
         type="file"
         ref={fileInputRef}
@@ -118,98 +140,81 @@ export const Library: React.FC = () => {
         accept=".mp3,.flac,.wav,.m4a"
       />
 
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Your Vault</h1>
-          <p className="text-text-secondary max-w-lg text-sm">
-            Manage your high-fidelity collection. Any file uploaded here will be processed by the Cortex Engine.
+          <h1 className="text-4xl font-black mb-3 uppercase tracking-tighter">Your Vault</h1>
+          <p className="text-text-secondary max-w-lg text-sm font-bold opacity-70">
+            Manage your high-fidelity collection. Every byte analyzed by the Cortex Engine.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="secondary" size="md" className="gap-2">
-            <Filter size={18} /> Filter
+        <div className="flex items-center gap-4">
+          <Button variant="secondary" size="md" className="gap-3">
+            <Filter size={18} /> <span className="text-xs font-black uppercase tracking-widest">Filter</span>
           </Button>
-          <Button size="md" className="gap-2" onClick={() => fileInputRef.current?.click()}>
-            <Upload size={18} /> Upload Music
+          <Button size="md" className="gap-3 shadow-xl active:scale-95" onClick={() => fileInputRef.current?.click()}>
+            <Upload size={18} /> <span className="text-xs font-black uppercase tracking-widest">Upload Music</span>
           </Button>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="flex items-center justify-between border-b border-accent/5 pb-4">
-        <div className="flex gap-8">
+      <motion.div variants={itemVariants} className="flex items-center justify-between border-b border-white/5 pb-4">
+        <div className="flex gap-10">
           {['All Songs', 'Albums', 'Artists'].map((tab, idx) => (
-            <button key={tab} className={`text-sm font-semibold transition-colors ${idx === 0 ? 'text-accent border-b-2 border-accent pb-4 -mb-[18px]' : 'text-text-secondary hover:text-text-primary'}`}>
+            <button key={tab} className={`text-[11px] font-black uppercase tracking-[0.2em] transition-all relative py-2 ${idx === 0 ? 'text-accent' : 'text-text-secondary hover:text-text-primary'}`}>
               {tab}
+              {idx === 0 && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent" />}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          <button className="p-2 text-accent bg-accent/10 rounded-lg"><List size={18} /></button>
-          <button className="p-2 text-text-secondary hover:text-text-primary"><GridIcon size={18} /></button>
+        <div className="flex items-center gap-4">
+          <button className="p-2.5 text-accent bg-accent/10 rounded-xl"><List size={18} /></button>
+          <button className="p-2.5 text-text-secondary hover:text-text-primary hover:bg-surface rounded-xl transition-all"><GridIcon size={18} /></button>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="overflow-x-auto">
+      <motion.div variants={itemVariants} className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
-            <tr className="text-[10px] text-text-secondary uppercase tracking-[2px] border-b border-accent/5">
-              <th className="pb-4 font-bold w-12 text-center">#</th>
-              <th className="pb-4 font-bold">Title</th>
-              <th className="pb-4 font-bold">Album</th>
-              <th className="pb-4 font-bold text-center">Analysis</th>
-              <th className="pb-4 font-bold text-right pr-4">Duration</th>
+            <tr className="text-[10px] text-text-secondary uppercase tracking-[3px] border-b border-white/5">
+              <th className="pb-6 font-black w-12 text-center opacity-40">#</th>
+              <th className="pb-6 font-black">Title</th>
+              <th className="pb-6 font-black">Album</th>
+              <th className="pb-6 font-black text-center">Analysis</th>
+              <th className="pb-6 font-black text-right pr-6">Time</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-accent/5">
+          <tbody className="divide-y divide-white/5">
             {tracks.map((track, idx) => (
-              <tr key={track.id} onClick={() => playTrack(track)} className="group hover:bg-surface transition-colors cursor-pointer">
-                <td className="py-4 text-sm text-text-secondary text-center group-hover:text-accent"><Music2 size={14} className="mx-auto" /></td>
-                <td className="py-4">
-                  <div className="flex items-center gap-3">
-                    <img src={track.coverUrl} className="w-10 h-10 rounded-lg object-cover" />
+              <motion.tr 
+                key={track.id} 
+                variants={itemVariants}
+                onClick={() => playTrack(track)} 
+                className="group hover:bg-surface/50 transition-all cursor-pointer border-l-4 border-transparent hover:border-accent"
+              >
+                <td className="py-6 text-xs font-black text-text-secondary/40 text-center group-hover:text-accent">0{idx + 1}</td>
+                <td className="py-6">
+                  <div className="flex items-center gap-4">
+                    <img src={track.coverUrl} className="w-12 h-12 rounded-xl object-cover shadow-lg" />
                     <div>
-                      <div className="text-sm font-semibold text-text-primary group-hover:text-accent transition-colors truncate max-w-[200px]">{track.title}</div>
-                      <div className="text-xs text-text-secondary">{track.artist}</div>
+                      <div className="text-sm font-black text-text-primary group-hover:text-accent transition-colors truncate max-w-[240px] tracking-tight uppercase">{track.title}</div>
+                      <div className="text-[10px] font-bold text-text-secondary uppercase tracking-widest opacity-60">{track.artist}</div>
                     </div>
                   </div>
                 </td>
-                <td className="py-4 text-sm text-text-secondary">{track.album}</td>
-                <td className="py-4 text-center">
-                  <span className="px-2 py-1 rounded-full bg-accent/5 text-[10px] font-bold text-accent border border-accent/10">
+                <td className="py-6 text-xs font-bold text-text-secondary opacity-70 uppercase tracking-tighter">{track.album}</td>
+                <td className="py-6 text-center">
+                  <span className="px-3 py-1.5 rounded-xl bg-accent/5 text-[9px] font-black uppercase tracking-widest text-accent border border-accent/10 shadow-sm group-hover:bg-accent/10 transition-colors">
                     {track.bpm} BPM • {track.mood}
                   </span>
                 </td>
-                <td className="py-4 text-sm text-text-secondary text-right pr-4 font-medium">
+                <td className="py-6 text-xs text-text-secondary text-right pr-6 font-mono opacity-60 font-bold">
                   {Math.floor(track.duration / 60)}:{(track.duration % 60).toString().padStart(2, '0')}
                 </td>
-              </tr>
+              </motion.tr>
             ))}
           </tbody>
         </table>
-      </div>
-
-      <div className="fixed bottom-28 right-8 z-[60] w-80 space-y-2 pointer-events-none">
-        <AnimatePresence>
-          {uploads.map((upload) => (
-            <motion.div key={upload.id} initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, scale: 0.9 }} className="pointer-events-auto glass rounded-xl p-4 border border-accent/20">
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${upload.status === 'completed' ? 'bg-success/20 text-success' : 'bg-accent/10 text-accent'}`}>
-                    {upload.status === 'completed' ? <CheckCircle2 size={16} /> : <Loader2 size={16} className="animate-spin" />}
-                  </div>
-                  <div className="min-w-0">
-                    <h5 className="text-xs font-bold text-text-primary truncate">{upload.name}</h5>
-                    <p className="text-[10px] text-text-secondary uppercase tracking-wider">{upload.status}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="w-full h-1 bg-background rounded-full overflow-hidden">
-                <motion.div className="h-full bg-accent" initial={{ width: 0 }} animate={{ width: `${upload.progress}%` }} />
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
