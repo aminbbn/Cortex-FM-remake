@@ -37,7 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
   const libraryItems = [
     { id: 'library', icon: Library, label: 'Your Library' },
     { id: 'liked', icon: Heart, label: 'Liked Songs' },
-    { id: 'create', icon: PlusSquare, label: 'Create Playlist' },
+    { id: 'playlists', icon: PlusSquare, label: 'Playlists' },
   ];
 
   return (
@@ -51,12 +51,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center shadow-xl">
           <Mic size={22} className="text-background" />
         </div>
-        <h1 className="text-xl font-black tracking-tighter text-text-primary uppercase">Cortex FM</h1>
+        <h1 className="text-xl font-black tracking-tighter text-text-primary">Cortex FM</h1>
       </motion.div>
 
       <nav className="flex-1 space-y-12">
         <motion.div variants={itemVariants}>
-          <h2 className="text-[10px] font-black text-text-secondary uppercase tracking-[0.4em] mb-6 px-4 opacity-40">Menu</h2>
+          <h2 className="text-[10px] font-black text-text-secondary tracking-[0.4em] mb-6 px-4 opacity-40">Menu</h2>
           <ul className="space-y-2">
             {menuItems.map((item) => (
               <motion.li key={item.id} variants={itemVariants}>
@@ -69,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
                   }`}
                 >
                   <item.icon size={20} className={activeTab === item.id ? 'text-accent' : 'group-hover:text-text-primary transition-colors'} />
-                  <span className="text-sm font-black uppercase tracking-widest">{item.label}</span>
+                  <span className="text-sm font-black tracking-widest">{item.label}</span>
                 </button>
               </motion.li>
             ))}
@@ -77,7 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         </motion.div>
 
         <motion.div variants={itemVariants}>
-          <h2 className="text-[10px] font-black text-text-secondary uppercase tracking-[0.4em] mb-6 px-4 opacity-40">Library</h2>
+          <h2 className="text-[10px] font-black text-text-secondary tracking-[0.4em] mb-6 px-4 opacity-40">Library</h2>
           <ul className="space-y-2">
             {libraryItems.map((item) => (
               <motion.li key={item.id} variants={itemVariants}>
@@ -90,7 +90,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
                   }`}
                 >
                   <item.icon size={20} className={activeTab === item.id ? 'text-accent' : 'group-hover:text-text-primary transition-colors'} />
-                  <span className="text-sm font-black uppercase tracking-widest">{item.label}</span>
+                  <span className="text-sm font-black tracking-widest">{item.label}</span>
                 </button>
               </motion.li>
             ))}
@@ -104,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
           className="w-full flex items-center gap-4 px-4 py-3 rounded-[13px] text-text-secondary hover:text-text-primary hover:bg-surface/50 transition-all duration-300 group border border-transparent"
         >
           <Settings size={20} className="group-hover:rotate-45 transition-transform duration-500" />
-          <span className="text-sm font-black uppercase tracking-widest">Settings</span>
+          <span className="text-sm font-black tracking-widest">Settings</span>
         </button>
       </motion.div>
     </motion.aside>

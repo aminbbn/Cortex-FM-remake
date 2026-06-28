@@ -3,5 +3,6 @@
   "description": "An intelligent, personalized music platform and AI-powered discovery engine that learns from your private collection to curate hyper-personalized playlists.",
   "requestFramePermissions": [
     "microphone"
-  ]
+  ],
+  "majorCapabilities": []
 }

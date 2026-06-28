@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Track } from '../types';
+import { Track, Playlist } from '../types';
 import { MOCK_TRACKS } from '../constants';
 
 interface MusicContextType {
@@ -17,6 +17,11 @@ interface MusicContextType {
   toggleRepeat: () => void;
   isShuffling: boolean;
   repeatMode: 'off' | 'all' | 'one';
+  likedTracks: string[];
+  toggleLikeTrack: (trackId: string) => void;
+  playlists: Playlist[];
+  createPlaylist: (name: string) => void;
+  addTrackToPlaylist: (playlistId: string, track: Track) => void;
 }
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined);
@@ -27,9 +32,36 @@ export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [isPlaying, setIsPlaying] = useState(false);
   const [isShuffling, setIsShuffling] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
+  const [likedTracks, setLikedTracks] = useState<string[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
 
   const addTrack = (track: Track) => {
     setTracks((prev) => [track, ...prev]);
+  };
+
+  const toggleLikeTrack = (trackId: string) => {
+    setLikedTracks(prev => prev.includes(trackId) ? prev.filter(id => id !== trackId) : [...prev, trackId]);
+  };
+
+  const createPlaylist = (name: string) => {
+    const newPlaylist: Playlist = {
+      id: `pl-${Date.now()}`,
+      name,
+      description: 'Custom Playlist',
+      coverUrl: `https://picsum.photos/seed/${Date.now()}/400/400`,
+      tracks: [],
+      type: 'custom'
+    };
+    setPlaylists(prev => [...prev, newPlaylist]);
+  };
+
+  const addTrackToPlaylist = (playlistId: string, track: Track) => {
+    setPlaylists(prev => prev.map(pl => {
+      if (pl.id === playlistId && !pl.tracks.find(t => t.id === track.id)) {
+        return { ...pl, tracks: [...pl.tracks, track] };
+      }
+      return pl;
+    }));
   };
 
   const getRandomIndex = (excludeIndex: number) => {
@@ -100,7 +132,8 @@ export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   return (
     <MusicContext.Provider value={{ 
       tracks, addTrack, currentTrack, setCurrentTrack, isPlaying, setIsPlaying,
-      nextTrack, prevTrack, toggleShuffle, toggleRepeat, isShuffling, repeatMode
+      nextTrack, prevTrack, toggleShuffle, toggleRepeat, isShuffling, repeatMode,
+      likedTracks, toggleLikeTrack, playlists, createPlaylist, addTrackToPlaylist
     }}>
       {children}
     </MusicContext.Provider>
