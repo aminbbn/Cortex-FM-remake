@@ -10,6 +10,7 @@ export interface Track {
   genre: string;
   mood: string;
   bpm: number;
+  isRadio?: boolean;
 }
 
 export interface Playlist {

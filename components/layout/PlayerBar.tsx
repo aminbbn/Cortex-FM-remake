@@ -25,8 +25,39 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ onNavigateToArtist }) => {
   const [showPlaylistMenu, setShowPlaylistMenu] = useState(false);
 
   useEffect(() => {
+    let animationFrameId: number;
+    let time = 0;
+
+    const updateMeter = () => {
+      const dataArray = new Uint8Array(32);
+      if (isPlaying) {
+         for (let i = 0; i < 32; i++) {
+            // Procedural generation of realistic-looking frequency data
+            const val = Math.sin(time * 15 + i * 0.5) * 60 + Math.cos(time * 8 + i * 2) * 40 + 120;
+            const noise = Math.random() * 30;
+            dataArray[i] = Math.max(0, Math.min(255, val + noise));
+         }
+         time += 0.03;
+      }
+      window.dispatchEvent(new CustomEvent('audioMeterUpdate', { detail: dataArray }));
+      animationFrameId = requestAnimationFrame(updateMeter);
+    };
+
+    updateMeter();
+
+    return () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    };
+  }, [isPlaying]);
+
+  useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {
+        if (!currentTrack.audioUrl) {
+           console.error("Playback failed: No audio URL for this track.");
+           setIsPlaying(false);
+           return;
+        }
         audioRef.current.play().catch(e => {
           console.error("Playback failed", e);
           setIsPlaying(false);
@@ -68,7 +99,10 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ onNavigateToArtist }) => {
     if (repeatMode === 'one') {
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
-        audioRef.current.play();
+        audioRef.current.play().catch(e => {
+          console.error("Playback failed on repeat", e);
+          setIsPlaying(false);
+        });
       }
     } else {
       nextTrack();
@@ -135,7 +169,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ onNavigateToArtist }) => {
       <div className="relative h-[110px] px-8 flex items-center justify-between">
         <audio 
           ref={audioRef} 
-          src={currentTrack.audioUrl} 
+          src={currentTrack.audioUrl}
           onTimeUpdate={onTimeUpdate} 
           onLoadedMetadata={onLoadedMetadata}
           onEnded={handleEnded}
@@ -211,30 +245,39 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ onNavigateToArtist }) => {
           
           {/* Progress Bar */}
           <div className="w-full flex items-center gap-4">
-            <span className="text-[10px] text-text-secondary font-bold w-10 text-right font-mono opacity-80">{formatTime(currentTime)}</span>
-            <div className="flex-1 relative group h-5 flex items-center cursor-pointer">
-              {/* Background Track */}
-              <div className="absolute inset-x-0 h-1.5 bg-white/10 rounded-full overflow-hidden transition-all group-hover:h-2">
-                 {/* Fill */}
-                 <div className="h-full bg-white relative flex items-center justify-end" style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}>
-                   <div className="absolute top-0 bottom-0 left-0 right-0 bg-gradient-to-r from-transparent to-white/30" />
-                 </div>
+            {currentTrack.isRadio ? (
+              <div className="flex-1 flex items-center justify-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#ff3333] animate-pulse shadow-[0_0_10px_rgba(255,51,51,0.6)]" />
+                <span className="text-[10px] font-black text-[#ff3333] tracking-widest uppercase">LIVE</span>
               </div>
-              <input 
-                type="range"
-                min="0"
-                max={duration || 100}
-                value={currentTime}
-                onChange={handleProgressChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              />
-              {/* Thumb indicator (visual only) */}
-              <div 
-                className="absolute h-3 w-3 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.8)] pointer-events-none transition-transform scale-0 group-hover:scale-100" 
-                style={{ left: `calc(${(currentTime / (duration || 1)) * 100}% - 6px)` }} 
-              />
-            </div>
-            <span className="text-[10px] text-text-secondary font-bold w-10 font-mono opacity-80">{formatTime(duration)}</span>
+            ) : (
+              <>
+                <span className="text-[10px] text-text-secondary font-bold w-10 text-right font-mono opacity-80">{formatTime(currentTime)}</span>
+                <div className="flex-1 relative group h-5 flex items-center cursor-pointer">
+                  {/* Background Track */}
+                  <div className="absolute inset-x-0 h-1.5 bg-white/10 rounded-full overflow-hidden transition-all group-hover:h-2">
+                     {/* Fill */}
+                     <div className="h-full bg-white relative flex items-center justify-end" style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}>
+                       <div className="absolute top-0 bottom-0 left-0 right-0 bg-gradient-to-r from-transparent to-white/30" />
+                     </div>
+                  </div>
+                  <input 
+                    type="range"
+                    min="0"
+                    max={duration || 100}
+                    value={currentTime}
+                    onChange={handleProgressChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  {/* Thumb indicator (visual only) */}
+                  <div 
+                    className="absolute h-3 w-3 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.8)] pointer-events-none transition-transform scale-0 group-hover:scale-100" 
+                    style={{ left: `calc(${(currentTime / (duration || 1)) * 100}% - 6px)` }} 
+                  />
+                </div>
+                <span className="text-[10px] text-text-secondary font-bold w-10 font-mono opacity-80">{formatTime(duration)}</span>
+              </>
+            )}
           </div>
         </div>
 

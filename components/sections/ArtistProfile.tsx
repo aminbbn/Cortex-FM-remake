@@ -1,16 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Heart, Share2, Disc, Flame, Users, Sparkles, MapPin, Calendar, Zap, Volume2, MessageSquare, Plus, Music, Radio, Sliders, RefreshCw, Layers, Radio as RadioIcon } from 'lucide-react';
+import {
+  Play, Heart, Share2, Disc, Users, Sparkles, Zap,
+  MessageSquare, Music, Radio as RadioIcon, Layers,
+  Verified, TrendingUp, Clock, ChevronRight, Pause,
+  MoreHorizontal, ListPlus, User, Info
+} from 'lucide-react';
 import { useMusic } from '../../context/MusicContext';
-import { Button } from '../ui/Button';
-
-interface FloatingParticle {
-  id: number;
-  emoji: string;
-  x: number;
-  rotate: number;
-  scale: number;
-}
 
 interface ArtistProfileProps {
   artistName: string;
@@ -19,96 +15,158 @@ interface ArtistProfileProps {
 }
 
 export const ArtistProfile: React.FC<ArtistProfileProps> = ({ artistName, onBack, onNavigateToAlbum }) => {
-  const { tracks, setCurrentTrack, setIsPlaying } = useMusic();
+  const { tracks, setCurrentTrack, setIsPlaying, isPlaying, currentTrack } = useMusic();
   const artistTracks = tracks.filter(t => t.artist === artistName);
-
-  const [hypeLevel, setHypeLevel] = useState(85);
-  const [stageColor, setStageColor] = useState<'inferno' | 'cyber' | 'neon'>('inferno');
-  const [particles, setParticles] = useState<FloatingParticle[]>([]);
-  const [liked, setLiked] = useState(false);
-  const [activeSubTab, setActiveSubTab] = useState<'singles' | 'albums' | 'playlists' | 'radio'>('singles');
-  const [chatMessages, setChatMessages] = useState<string[]>([
-    "OMGGGG LIVE RIGHT NOW! 🔥",
-    "This bass drop is insane!!! 🙌",
-    "Are you seeing these laser lights?! ⚡",
-    "BEST ALBUM OF THE YEAR!!",
-  ]);
-  const [newMsg, setNewMsg] = useState("");
-
-  // Artist Radio Tab state
-  const [radioPlaying, setRadioPlaying] = useState(false);
-  const [radioBpm, setRadioBpm] = useState(124);
-  const [crowdCheerLevel, setCrowdCheerLevel] = useState(65);
-  const [bassBoost, setBassBoost] = useState(true);
-  const [reverbActive, setReverbActive] = useState(false);
-  const [vibeSelected, setVibeSelected] = useState<'concert' | 'cyber-club' | 'lofi-dome'>('concert');
-  const [frequencyBars, setFrequencyBars] = useState<number[]>([40, 60, 45, 80, 95, 70, 50, 65, 85, 45, 50, 75, 90, 60, 40]);
+  const meterBarsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [headerVisible, setHeaderVisible] = useState(false);
+  const [isRadioActive, setIsRadioActive] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [showAllAlbums, setShowAllAlbums] = useState(false);
+  
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const { likedTracks, toggleLikeTrack } = useMusic();
 
   const playTrack = (track: any) => {
     setCurrentTrack(track);
     setIsPlaying(true);
-    triggerReaction("🎵");
   };
 
-  const triggerReaction = (emoji: string) => {
-    setHypeLevel(prev => Math.min(100, prev + 2));
-    const newParticle: FloatingParticle = {
-      id: Date.now() + Math.random(),
-      emoji,
-      x: Math.random() * 80 + 10, // percentage from left
-      rotate: Math.random() * 60 - 30,
-      scale: Math.random() * 0.5 + 0.8
-    };
-    setParticles(prev => [...prev, newParticle]);
-    setTimeout(() => {
-      setParticles(prev => prev.filter(p => p.id !== newParticle.id));
-    }, 2000);
-  };
+  const isArtistPlaying = isPlaying && artistTracks.some(t => t.id === currentTrack?.id);
 
-  const handleSendChat = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMsg.trim()) return;
-    setChatMessages(prev => [...prev, `You: ${newMsg}`]);
-    setNewMsg("");
-    setHypeLevel(prev => Math.min(100, prev + 5));
-    // Trigger floating response
-    triggerReaction("💬");
-  };
-
-  // Slowly decay hype level over time
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setHypeLevel(prev => Math.max(60, prev - 1));
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Update mock radio wave bars
-  useEffect(() => {
-    if (!radioPlaying) return;
-    const interval = setInterval(() => {
-      setFrequencyBars(prev => prev.map(bar => {
-        const factor = radioBpm / 120;
-        const randomness = Math.random() * 40 - 20;
-        const target = Math.max(10, Math.min(100, bar + randomness * factor));
-        return target;
-      }));
-    }, 100);
-    return () => clearInterval(interval);
-  }, [radioPlaying, radioBpm]);
-
-  const getStageGradient = () => {
-    switch (stageColor) {
-      case 'inferno':
-        return 'from-amber-600 via-red-600 to-purple-950';
-      case 'cyber':
-        return 'from-fuchsia-600 via-pink-600 to-indigo-950';
-      case 'neon':
-        return 'from-cyan-600 via-teal-600 to-blue-950';
+  const toggleArtistPlay = () => {
+    if (isArtistPlaying) {
+      setIsPlaying(false);
+    } else if (artistTracks.length > 0) {
+      playTrack(artistTracks[0]);
     }
   };
 
-  // Extract unique albums
+  // Sticky mini-header on scroll
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => setHeaderVisible(el.scrollTop > 320);
+    el.addEventListener('scroll', onScroll);
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setActiveDropdownId(null);
+      setHeaderMenuOpen(false);
+    };
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(window.location.href);
+    setToastMessage("Link copied to clipboard");
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const toggleRadio = () => {
+    if (isRadioActive) {
+      setIsRadioActive(false);
+      setIsPlaying(false);
+    } else {
+      setIsRadioActive(true);
+      setCurrentTrack({
+        id: 'radio-lazerhawk',
+        title: `Non-Stop ${artistName}`,
+        artist: artistName,
+        album: 'Live Stream',
+        coverUrl: bannerUrl,
+        duration: 0,
+        genre: artistTracks[0]?.genre || 'Electronic',
+        mood: 'High Energy',
+        bpm: 120,
+        audioUrl: artistTracks[0]?.audioUrl, // Mock with an actual valid audio URL
+        isRadio: true
+      });
+      setIsPlaying(true);
+    }
+  };
+
+  const isCortexMixPlaying = isPlaying && currentTrack?.id === 'cortex-mix';
+
+  const toggleCortexMix = () => {
+    if (isCortexMixPlaying) {
+      setIsPlaying(false);
+    } else {
+      setCurrentTrack({
+        id: 'cortex-mix',
+        title: `${artistName} Signature Mix`,
+        artist: 'Cortex Intelligence',
+        album: 'Curated Mix',
+        coverUrl: artistAvatarUrl,
+        duration: 3840, // 1h 4m
+        genre: artistTracks[0]?.genre || 'Electronic',
+        mood: 'Focus',
+        bpm: 100,
+        audioUrl: artistTracks[0]?.audioUrl
+      });
+      setIsPlaying(true);
+    }
+  };
+
+  // Audio meter
+  useEffect(() => {
+    let animationFrameId: number;
+    let time = 0;
+    let currentData = new Uint8Array(32);
+
+    const handleMeterUpdate = (e: Event) => {
+      currentData = (e as CustomEvent).detail as Uint8Array;
+    };
+
+    const renderMeter = () => {
+      const bars = meterBarsRef.current;
+      const numBars = 40;
+      
+      for (let i = 0; i < numBars; i++) {
+        const bar = bars[i];
+        if (!bar) continue;
+        
+        let heightPercent = 8;
+        let opacity = 0.2;
+        
+        if (isPlaying && currentData && currentData.length > 0) {
+          const dataIndex = Math.floor((i / numBars) * currentData.length);
+          const value = currentData[dataIndex] || 0;
+          heightPercent = Math.max(8, (value / 255) * 100);
+          opacity = Math.max(0.25, value / 255);
+        } else {
+          // Idle dynamic wave animation
+          const wave = Math.sin(time + i * 0.3) * 0.5 + 0.5;
+          heightPercent = 8 + wave * 25; // 8% to 33% height
+          opacity = 0.15 + wave * 0.25;
+        }
+        
+        bar.style.height = `${heightPercent}%`;
+        bar.style.opacity = `${opacity}`;
+      }
+      
+      if (!isPlaying) {
+         time += 0.05;
+      }
+      animationFrameId = requestAnimationFrame(renderMeter);
+    };
+
+    window.addEventListener('audioMeterUpdate', handleMeterUpdate);
+    animationFrameId = requestAnimationFrame(renderMeter);
+
+    return () => {
+      window.removeEventListener('audioMeterUpdate', handleMeterUpdate);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [isPlaying]);
+
   const uniqueAlbums = Array.from(new Set(artistTracks.map(t => t.album))).map(albumName => {
     const trackForAlbum = artistTracks.find(t => t.album === albumName) || artistTracks[0];
     return {
@@ -120,504 +178,635 @@ export const ArtistProfile: React.FC<ArtistProfileProps> = ({ artistName, onBack
     };
   });
 
-  // Custom playlists containing artist tracks or curated Mixes
   const customPlaylists = [
     {
       id: `pl-${artistName}-essential`,
       name: `This Is ${artistName}`,
-      description: `The absolute critical anthems and high-energy live selections of ${artistName}.`,
+      description: `The critical anthems and high-energy live selections.`,
       coverUrl: artistTracks[0]?.coverUrl || `https://picsum.photos/seed/${artistName}p1/400/400`,
       tracksCount: artistTracks.length
     },
     {
       id: `pl-${artistName}-radio`,
       name: `${artistName} Radio Session`,
-      description: `Immersive non-stop radio broadcasts curated around the unique spectrum of ${artistName}.`,
+      description: `Non-stop radio broadcasts curated around the unique spectrum.`,
       coverUrl: `https://picsum.photos/seed/${artistName}radio/400/400`,
       tracksCount: artistTracks.length + 4
     }
   ];
 
+  const comments = [
+    { id: 1, user: "NeonRider", text: "This artist literally rewired my brain.", likes: 124 },
+    { id: 2, user: "SynthWave_99", text: "The production on the latest album is out of this world.", likes: 89 },
+    { id: 3, user: "CyberPunk_2077", text: "Listening to this on a late night drive is an experience.", likes: 56 },
+  ];
+
+  const fansAlsoLike = [
+    { name: "Kavinsky", coverUrl: `https://ui-avatars.com/api/?name=Kavinsky&background=random&size=256` },
+    { name: "Daft Punk", coverUrl: `https://ui-avatars.com/api/?name=Daft+Punk&background=random&size=256` },
+    { name: "Justice", coverUrl: `https://ui-avatars.com/api/?name=Justice&background=random&size=256` },
+  ];
+
+  const artistAvatarUrl = artistTracks[0]?.coverUrl
+    || `https://ui-avatars.com/api/?name=${encodeURIComponent(artistName)}&background=random&size=512`;
+  const bannerUrl = `https://picsum.photos/seed/${artistName}-banner/1600/600`;
+  const listenerCount = (artistTracks.length * 15324).toLocaleString();
+
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-32 relative overflow-x-hidden min-h-screen">
-      {/* Floating Reactions Canvas */}
-      <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
-        <AnimatePresence>
-          {particles.map(p => (
-            <motion.div
-              key={p.id}
-              initial={{ y: "100%", x: `${p.x}%`, opacity: 0, scale: p.scale }}
-              animate={{ y: "20%", opacity: [0, 1, 1, 0], scale: p.scale * 1.2 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 2, ease: "easeOut" }}
-              className="absolute text-3xl filter drop-shadow-[0_0_10px_rgba(255,255,255,0.4)]"
-              style={{ rotate: `${p.rotate}deg` }}
+    <div ref={scrollRef} className="relative overflow-y-auto overflow-x-hidden min-h-screen pb-36 scroll-smooth">
+
+      {/* ─── TOAST NOTIFICATION ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 bg-white text-black text-xs font-bold tracking-widest uppercase rounded-full shadow-2xl"
+          >
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── STICKY MINI HEADER ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {headerVisible && (
+          <motion.div
+            initial={{ y: -60, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -60, opacity: 0 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="fixed top-0 left-0 right-0 z-50 flex items-center gap-4 px-6 py-3 bg-background/80 backdrop-blur-xl border-b border-white/5"
+          >
+            <button onClick={onBack} className="text-white/50 hover:text-white transition-colors text-xs font-bold tracking-widest uppercase">
+              ← Back
+            </button>
+            <div className="w-px h-4 bg-white/10" />
+            <img src={artistAvatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+            <span className="text-sm font-black tracking-tight text-white flex-1">{artistName}</span>
+            <button
+              onClick={toggleArtistPlay}
+              className="w-9 h-9 rounded-full bg-accent text-background flex items-center justify-center hover:scale-105 transition-transform shrink-0"
             >
-              {p.emoji}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
+              {isArtistPlaying
+                ? <Pause fill="currentColor" size={14} />
+                : <Play fill="currentColor" size={14} className="ml-0.5" />
+              }
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Dynamic Concert Stage Background Banner */}
-      <div className="absolute top-0 left-0 right-0 h-[520px] mx-0 overflow-hidden pointer-events-none">
-         <div 
-           className={`absolute -inset-32 bg-gradient-to-br ${getStageGradient()} opacity-30 blur-[100px] saturate-200 transition-all duration-1000`}
-         />
-         {/* Dual layered gradient for maximum smooth transition with zero sharp lines */}
-         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
-         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-95" />
-         
-         {/* Glowing Laser Beams */}
-         <div className="absolute top-0 left-1/4 w-[1.5px] h-full bg-gradient-to-b from-accent/40 to-transparent rotate-[35deg] blur-[2px] animate-pulse" />
-         <div className="absolute top-0 right-1/4 w-[2.5px] h-full bg-gradient-to-b from-accent/30 to-transparent -rotate-[25deg] blur-[3px] animate-pulse" style={{ animationDelay: '1s' }} />
-      </div>
+      {/* ─── BANNER + PROFILE HEADER ────────────────────────────────────── */}
+      <div className="relative w-full">
+        {/* Banner image */}
+        <div className="relative w-full h-[280px] md:h-[340px] overflow-hidden">
+          <img
+            src={bannerUrl}
+            alt=""
+            className="w-full h-full object-cover"
+          />
+          {/* Dark scrim — stronger at bottom so profile info stays readable */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-background/10" />
+          {/* Accent tint layer */}
+          <div className="absolute inset-0 bg-accent/10 mix-blend-color" />
 
-      <div className="relative z-10 pt-8 px-8 md:px-20 lg:px-24 space-y-10">
-        <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all text-xs font-black tracking-widest text-white uppercase group shadow-2xl">
-          <span className="group-hover:-translate-x-1 transition-transform">←</span> Back to Vault
-        </button>
+          {/* Back button — lives inside banner */}
+          <button
+            onClick={onBack}
+            className="absolute top-5 left-5 md:top-6 md:left-8 flex items-center gap-2 px-3.5 py-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 transition-all text-[10px] font-black tracking-[0.2em] uppercase text-white/80 hover:text-white group"
+          >
+            <span className="group-hover:-translate-x-0.5 transition-transform inline-block">←</span> Back
+          </button>
 
-        {/* Hero Section - Minimal Perfection */}
-        <div className="flex flex-col md:flex-row gap-10 items-center md:items-end w-full">
-          <div className="w-48 h-48 rounded-full overflow-hidden shadow-[0_0_50px_rgba(255,69,0,0.3)] border-2 border-white/10 shrink-0 relative group">
-            <img src={artistTracks[0]?.coverUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(artistName)}&background=random&size=256`} alt={artistName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-full backdrop-blur-[2px]">
-              <Disc className="text-white animate-spin" size={40} />
+          {/* Share / More — top right */}
+          <div className="absolute top-5 right-5 md:top-6 md:right-8 flex items-center gap-2">
+            <button onClick={handleShare} className="w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all text-white/70 hover:text-white">
+              <Share2 size={14} />
+            </button>
+            <div className="relative">
+              <button 
+                onClick={(e) => { e.stopPropagation(); setHeaderMenuOpen(!headerMenuOpen); }}
+                className="w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all text-white/70 hover:text-white"
+              >
+                <MoreHorizontal size={14} />
+              </button>
+              <AnimatePresence>
+                {headerMenuOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95, transformOrigin: 'top right' }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-2 w-48 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 p-1"
+                  >
+                    <button className="w-full text-left px-4 py-2.5 text-xs font-bold text-white/70 hover:bg-white/10 hover:text-white rounded-lg transition-colors">Report</button>
+                    <button className="w-full text-left px-4 py-2.5 text-xs font-bold text-white/70 hover:bg-white/10 hover:text-white rounded-lg transition-colors">Block</button>
+                    <button className="w-full text-left px-4 py-2.5 text-xs font-bold text-white/70 hover:bg-white/10 hover:text-white rounded-lg transition-colors">View Credits</button>
+                    <button className="w-full text-left px-4 py-2.5 text-xs font-bold text-white/70 hover:bg-white/10 hover:text-white rounded-lg transition-colors">Pin to Home</button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          </div>
-          <div className="space-y-4 text-center md:text-left flex-1 pb-4">
-            <div className="text-[10px] font-black tracking-[0.3em] text-accent uppercase flex items-center justify-center md:justify-start gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_currentColor]" /> 
-              Live Stage Venue
-            </div>
-            <h1 className="text-5xl md:text-8xl font-black tracking-tighter drop-shadow-[0_4px_24px_rgba(0,0,0,0.8)] text-white">{artistName}</h1>
-            <p className="text-white/60 font-medium text-sm tracking-widest flex items-center justify-center md:justify-start gap-2">
-              <Users size={16} className="text-white/40" /> {artistTracks.length * 15324} Live Listeners Worldwide
-            </p>
           </div>
         </div>
 
-        {/* Live Audio & Crowd Reaction Dashboard */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Main Controls Panel */}
-          <div className="lg:col-span-2 bg-gradient-to-br from-surface to-background border border-white/5 rounded-[2rem] p-8 shadow-2xl space-y-8 relative overflow-hidden flex flex-col justify-between">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
-            
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-b border-white/5 pb-6">
-                <div>
-                  <h3 className="text-2xl font-black tracking-tight">Stage Control Deck</h3>
-                  <p className="text-xs font-bold text-text-secondary opacity-70">Direct the live show vibe.</p>
-                </div>
+        {/* Profile section: avatar + info + actions */}
+        <div className="relative px-6 md:px-10 lg:px-16 -mt-16 md:-mt-20 pb-8 border-b border-white/5">
+          <div className="flex flex-col md:flex-row md:items-end gap-5 md:gap-7">
 
-                {/* Laser / Lighting Theme selectors */}
-                <div className="flex gap-2 bg-black/40 p-1.5 rounded-xl border border-white/5">
-                  <button 
-                    onClick={() => setStageColor('inferno')}
-                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${stageColor === 'inferno' ? 'bg-red-500 text-white shadow-lg' : 'text-text-secondary hover:text-white'}`}
-                  >
-                    Inferno
-                  </button>
-                  <button 
-                    onClick={() => setStageColor('cyber')}
-                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${stageColor === 'cyber' ? 'bg-pink-500 text-white shadow-lg' : 'text-text-secondary hover:text-white'}`}
-                  >
-                    Cyber
-                  </button>
-                  <button 
-                    onClick={() => setStageColor('neon')}
-                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${stageColor === 'neon' ? 'bg-cyan-500 text-white shadow-lg' : 'text-text-secondary hover:text-white'}`}
-                  >
-                    Laser
-                  </button>
-                </div>
+            {/* Avatar */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              className="relative shrink-0"
+            >
+              <div className="w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden border-4 border-background shadow-2xl">
+                <img src={artistAvatarUrl} alt={artistName} className="w-full h-full object-cover" />
               </div>
+              {/* Live / online badge */}
+              <div className="absolute -bottom-2 -right-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent text-background text-[10px] font-black tracking-widest uppercase shadow-lg">
+                <span className="w-1.5 h-1.5 rounded-full bg-background animate-pulse" />
+                Live
+              </div>
+            </motion.div>
 
-              {/* Main High-Energy Stage Buttons */}
-              <div className="flex flex-wrap items-center gap-6 justify-center sm:justify-start">
-                {/* Perfectly centered Play Button (Fixes play button vision) */}
-                <button 
-                  onClick={() => artistTracks.length > 0 && playTrack(artistTracks[0])} 
-                  className="w-20 h-20 rounded-full bg-accent hover:bg-white text-background flex items-center justify-center shadow-[0_12px_40px_rgba(255,255,255,0.25)] hover:scale-110 active:scale-95 transition-all duration-300 group focus:outline-none shrink-0"
+            {/* Name + meta */}
+            <div className="flex-1 min-w-0 pb-1 md:pb-3">
+              {/* Verified label */}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+                className="flex items-center gap-1.5 text-accent text-[10px] font-black tracking-[0.3em] uppercase mb-2"
+              >
+                <Verified size={12} />
+                Verified Artist
+              </motion.div>
+
+              {/* Artist name */}
+              <motion.h1
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
+                className="text-4xl md:text-6xl font-black tracking-tighter leading-none text-white mb-4"
+              >
+                {artistName}
+              </motion.h1>
+
+              {/* Stats row */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4, delay: 0.3 }}
+                className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-bold text-white/50"
+              >
+                <span className="flex items-center gap-1.5">
+                  <TrendingUp size={12} className="text-accent" />
+                  <span className="text-white">{listenerCount}</span>&nbsp;monthly listeners
+                </span>
+                <span className="w-px h-3 bg-white/10 hidden sm:block" />
+                <span className="flex items-center gap-1.5">
+                  <Disc size={12} className="text-accent" />
+                  <span className="text-white">{uniqueAlbums.length}</span>&nbsp;albums
+                </span>
+                <span className="w-px h-3 bg-white/10 hidden sm:block" />
+                <span className="flex items-center gap-1.5">
+                  <Layers size={12} className="text-accent" />
+                  <span className="text-white">{artistTracks.length}</span>&nbsp;tracks
+                </span>
+                <span className="w-px h-3 bg-white/10 hidden sm:block" />
+                <span className="flex items-center gap-1.5">
+                  <Clock size={12} className="text-accent" />
+                  Genre: <span className="text-white ml-1">{artistTracks[0]?.genre || 'Electronic'}</span>
+                </span>
+              </motion.div>
+            </div>
+
+            {/* Action buttons */}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.35 }}
+              className="flex items-center gap-3 pb-1 md:pb-3"
+            >
+              {/* Big play */}
+              <button
+                onClick={toggleArtistPlay}
+                className="w-14 h-14 min-w-[3.5rem] min-h-[3.5rem] aspect-square rounded-full bg-accent text-background flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-300 shadow-[0_0_24px_rgba(255,255,255,0.15)] shrink-0"
+              >
+                {isArtistPlaying
+                  ? <Pause fill="currentColor" size={22} />
+                  : <Play fill="currentColor" size={22} className="ml-1" />
+                }
+              </button>
+
+              {/* Follow */}
+              <button
+                onClick={() => setIsFollowing(f => !f)}
+                className={`px-5 py-2.5 rounded-full border font-black text-xs uppercase tracking-widest transition-all duration-300 ${
+                  isFollowing
+                    ? 'bg-accent/10 border-accent text-accent'
+                    : 'border-white/20 text-white/70 hover:border-white/50 hover:text-white'
+                }`}
+              >
+                {isFollowing ? 'Following' : 'Follow'}
+              </button>
+
+              {/* Like */}
+              <button className="w-10 h-10 rounded-full border border-white/10 hover:border-white/30 flex items-center justify-center text-white/50 hover:text-white transition-all">
+                <Heart size={16} />
+              </button>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── MAIN CONTENT ───────────────────────────────────────────────── */}
+      <div className="relative z-10 w-full">
+
+        {/* ─── THE VAULT (Track List) ────────────────────────────────────── */}
+        <div className="max-w-[1400px] mx-auto px-6 md:px-10 lg:px-16 py-16">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="flex items-end justify-between mb-10"
+          >
+            <div>
+              <h2 className="text-2xl font-black tracking-tight mb-1">Popular</h2>
+              <p className="text-xs font-bold text-white/30 tracking-widest uppercase">Decoded Frequencies</p>
+            </div>
+            <span className="hidden md:flex items-center gap-1.5 text-xs font-mono text-white/25">
+              <Layers size={12} /> {artistTracks.length} tracks
+            </span>
+          </motion.div>
+
+          <div className="flex flex-col gap-1 mt-2">
+            {artistTracks.map((track, i) => {
+              const isCurrentlyPlaying = isPlaying && currentTrack?.id === track.id;
+              // Synthesize a realistic-looking play count
+              const playCount = (Math.floor(8000000 / (i + 1.2)) + 3421).toLocaleString('en-US');
+              const isLiked = likedTracks.includes(track.id);
+              
+              return (
+                <motion.div
+                  key={track.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: Math.min(i * 0.05, 0.3) }}
+                  onClick={() => playTrack(track)}
+                  className="group flex items-center justify-between p-3 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer relative"
                 >
-                  <Play fill="currentColor" size={32} className="ml-1 text-background group-hover:scale-105 transition-transform" />
-                </button>
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="w-8 text-center text-xs font-mono text-white/30 group-hover:text-white/70">
+                      {isCurrentlyPlaying ? (
+                        <div className="flex items-end justify-center gap-[2px] h-3">
+                          <motion.div animate={{ height: [4, 12, 4] }} transition={{ repeat: Infinity, duration: 0.8 }} className="w-[3px] bg-accent rounded-full" />
+                          <motion.div animate={{ height: [12, 6, 12] }} transition={{ repeat: Infinity, duration: 0.9 }} className="w-[3px] bg-accent rounded-full" />
+                          <motion.div animate={{ height: [6, 10, 6] }} transition={{ repeat: Infinity, duration: 0.7 }} className="w-[3px] bg-accent rounded-full" />
+                        </div>
+                      ) : (
+                        <>
+                          <span className="group-hover:hidden">{i + 1}</span>
+                          <Play fill="currentColor" size={12} className="mx-auto hidden group-hover:block ml-2.5" />
+                        </>
+                      )}
+                    </div>
+                    
+                    <div className="w-12 h-12 rounded-md overflow-hidden shrink-0 relative">
+                       <img src={track.coverUrl} className="w-full h-full object-cover" alt="" />
+                       <div className="absolute inset-0 bg-black/20" />
+                    </div>
 
-                <div className="flex flex-wrap gap-3">
-                  <button 
-                    onClick={() => triggerReaction("🔥")}
-                    className="px-5 py-3 rounded-2xl bg-red-600/10 hover:bg-red-600 border border-red-500/20 hover:border-red-500 hover:text-white text-red-400 font-black text-xs tracking-widest uppercase transition-all flex items-center gap-2 active:scale-95 shadow-xl"
-                  >
-                    🔥 Light Flare
-                  </button>
-                  <button 
-                    onClick={() => triggerReaction("🙌")}
-                    className="px-5 py-3 rounded-2xl bg-amber-600/10 hover:bg-amber-600 border border-amber-500/20 hover:border-amber-500 hover:text-white text-amber-400 font-black text-xs tracking-widest uppercase transition-all flex items-center gap-2 active:scale-95 shadow-xl"
-                  >
-                    🙌 Hands Up
-                  </button>
-                  <button 
-                    onClick={() => triggerReaction("⚡")}
-                    className="px-5 py-3 rounded-2xl bg-cyan-600/10 hover:bg-cyan-600 border border-cyan-500/20 hover:border-cyan-500 hover:text-white text-cyan-400 font-black text-xs tracking-widest uppercase transition-all flex items-center gap-2 active:scale-95 shadow-xl"
-                  >
-                    ⚡ Laser Burst
-                  </button>
+                    <div className="flex-1 min-w-0 pr-4">
+                       <h3 className={`text-sm font-bold truncate ${isCurrentlyPlaying ? 'text-accent' : 'text-white'}`}>
+                         {track.title}
+                       </h3>
+                       <div className="flex items-center gap-2 mt-0.5">
+                         <span className="text-xs text-white/40 truncate">{playCount} plays</span>
+                         <span className="w-1 h-1 rounded-full bg-white/20" />
+                         <span className="text-[10px] text-white/30 uppercase tracking-widest">{track.genre}</span>
+                       </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-5">
+                     <button 
+                       onClick={(e) => { e.stopPropagation(); toggleLikeTrack(track.id); }}
+                       className={`${isLiked ? 'text-accent opacity-100 block' : 'text-white/30 hover:text-white opacity-0 group-hover:opacity-100 hidden sm:block'} transition-colors`}
+                     >
+                       <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
+                     </button>
+                     <span className="text-xs text-white/40 font-mono w-10 text-right">
+                        {Math.floor(track.duration / 60)}:{String(track.duration % 60).padStart(2, '0')}
+                     </span>
+                     <div className="relative">
+                       <button 
+                         onClick={(e) => { 
+                           e.stopPropagation(); 
+                           setActiveDropdownId(activeDropdownId === track.id ? null : track.id);
+                         }}
+                         className="text-white/30 hover:text-white transition-colors opacity-0 group-hover:opacity-100 hidden sm:block"
+                       >
+                         <MoreHorizontal size={16} />
+                       </button>
+                       <AnimatePresence>
+                         {activeDropdownId === track.id && (
+                           <motion.div 
+                             initial={{ opacity: 0, scale: 0.95 }}
+                             animate={{ opacity: 1, scale: 1 }}
+                             exit={{ opacity: 0, scale: 0.95 }}
+                             transition={{ duration: 0.15 }}
+                             className="absolute right-0 top-full mt-2 w-48 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 p-1"
+                           >
+                             <button onClick={(e) => { e.stopPropagation(); setToastMessage('Added to playlist'); setActiveDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-xs font-bold text-white/70 hover:bg-white/10 hover:text-white rounded-lg transition-colors flex items-center gap-2"><div className="w-4">+</div> Add to playlist <ChevronRight size={14} className="ml-auto opacity-50"/></button>
+                             <button onClick={(e) => { e.stopPropagation(); toggleLikeTrack(track.id); setToastMessage(isLiked ? 'Removed from Liked Songs' : 'Saved to your Liked Songs'); setActiveDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-xs font-bold text-white/70 hover:bg-white/10 hover:text-white rounded-lg transition-colors flex items-center gap-2"><div className="w-4"><Heart size={14} /></div> {isLiked ? 'Remove from Liked Songs' : 'Save to your Liked Songs'}</button>
+                             <button onClick={(e) => { e.stopPropagation(); setToastMessage('Added to queue'); setActiveDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-xs font-bold text-white/70 hover:bg-white/10 hover:text-white rounded-lg transition-colors flex items-center gap-2"><div className="w-4"><ListPlus size={14} /></div> Add to queue</button>
+                             <div className="w-full h-px bg-white/10 my-1" />
+                             <button onClick={(e) => { e.stopPropagation(); setToastMessage('Starting song radio'); setActiveDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-xs font-bold text-white/70 hover:bg-white/10 hover:text-white rounded-lg transition-colors flex items-center gap-2"><div className="w-4"><RadioIcon size={14} /></div> Go to song radio</button>
+                             <button onClick={(e) => { e.stopPropagation(); setToastMessage('Going to artist'); setActiveDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-xs font-bold text-white/70 hover:bg-white/10 hover:text-white rounded-lg transition-colors flex items-center gap-2"><div className="w-4"><User size={14} /></div> Go to artist</button>
+                             <button onClick={(e) => { e.stopPropagation(); setToastMessage('Going to album'); setActiveDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-xs font-bold text-white/70 hover:bg-white/10 hover:text-white rounded-lg transition-colors flex items-center gap-2"><div className="w-4"><Disc size={14} /></div> Go to album</button>
+                             <button onClick={(e) => { e.stopPropagation(); setToastMessage('Viewing credits'); setActiveDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-xs font-bold text-white/70 hover:bg-white/10 hover:text-white rounded-lg transition-colors flex items-center gap-2"><div className="w-4"><Info size={14} /></div> View credits</button>
+                             <div className="w-full h-px bg-white/10 my-1" />
+                             <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(window.location.href); setToastMessage('Link copied to clipboard'); setActiveDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-xs font-bold text-white/70 hover:bg-white/10 hover:text-white rounded-lg transition-colors flex items-center gap-2"><div className="w-4"><Share2 size={14} /></div> Share <ChevronRight size={14} className="ml-auto opacity-50"/></button>
+                           </motion.div>
+                         )}
+                       </AnimatePresence>
+                     </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ─── CORTEX SIGNATURE MIX ─────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="max-w-[1400px] mx-auto px-6 md:px-10 lg:px-16 pb-16"
+        >
+          <div className="relative rounded-3xl overflow-hidden border border-white/8 bg-black/40 backdrop-blur-2xl flex flex-col md:flex-row">
+            <div className="absolute inset-0 bg-gradient-to-r from-accent/15 via-transparent to-transparent pointer-events-none" />
+
+            <div className="relative z-10 w-full md:w-2/5 p-8 md:p-10 flex flex-col justify-between border-b md:border-b-0 md:border-r border-white/8">
+              <div>
+                <div className="flex items-center gap-2 text-accent text-[10px] font-black tracking-[0.3em] uppercase mb-3">
+                  <Sparkles size={12} className="animate-pulse" /> Cortex Intelligence
+                </div>
+                <h2 className="text-3xl md:text-4xl font-black tracking-tighter leading-tight mb-3">
+                  {artistName} <br />
+                  <span className="text-white/35">Signature Mix</span>
+                </h2>
+                <p className="text-sm text-white/50 leading-relaxed">
+                  An hour of seamless algorithmically-blended audio — deepest cuts fused with your exact sonic taste.
+                </p>
+              </div>
+              <div className="mt-7 flex items-center gap-4">
+                <button
+                  onClick={toggleCortexMix}
+                  className="w-12 h-12 min-w-[3rem] min-h-[3rem] aspect-square rounded-full bg-accent text-background flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-300 shrink-0"
+                >
+                  {isCortexMixPlaying ? (
+                    <Pause fill="currentColor" size={18} />
+                  ) : (
+                    <Play fill="currentColor" size={18} className="ml-0.5" />
+                  )}
+                </button>
+                <div>
+                  <div className="text-xs font-black tracking-widest uppercase text-white">{isCortexMixPlaying ? 'Playing' : 'Play Mix'}</div>
+                  <div className="text-[10px] font-mono text-white/40 mt-0.5">1H 04M · SEAMLESS</div>
                 </div>
               </div>
             </div>
 
-            {/* HIGH-FIDELITY SUB NAVIGATION SUBSECTIONS */}
-            <div className="space-y-6 pt-8 border-t border-white/5 flex-1 flex flex-col justify-between">
-              {/* Vibe Tabs */}
-              <div className="flex border-b border-white/5 pb-2 gap-6 overflow-x-auto">
-                {(['singles', 'albums', 'playlists', 'radio'] as const).map(tab => (
-                  <button 
-                    key={tab}
-                    onClick={() => setActiveSubTab(tab)}
-                    className={`relative pb-3 text-xs font-black uppercase tracking-[0.2em] transition-colors whitespace-nowrap ${activeSubTab === tab ? 'text-accent' : 'text-text-secondary hover:text-white'}`}
-                  >
-                    {tab === 'singles' && '🎵 Singles'}
-                    {tab === 'albums' && '💿 Albums'}
-                    {tab === 'playlists' && '📋 Playlists'}
-                    {tab === 'radio' && '📻 Artist Radio'}
-                    
-                    {activeSubTab === tab && (
-                      <motion.div 
-                        layoutId="subTabBorder" 
-                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent"
-                      />
-                    )}
-                  </button>
+            <div className="relative z-10 w-full md:w-3/5 p-8 md:p-10 flex items-end justify-center overflow-hidden">
+              <div className="w-full flex items-end gap-1 h-24 mix-blend-screen">
+                {[...Array(40)].map((_, i) => (
+                  <div
+                    key={i}
+                    ref={el => meterBarsRef.current[i] = el}
+                    className="flex-1 bg-gradient-to-t from-accent/20 to-accent rounded-full transition-[height] duration-75"
+                    style={{ height: '8%', opacity: 0.2 }}
+                  />
                 ))}
               </div>
-
-              {/* Sub Tab Content Display */}
-              <div className="flex-1 pt-4">
-                <AnimatePresence mode="wait">
-                  {activeSubTab === 'singles' && (
-                    <motion.div 
-                      key="singles"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="space-y-2 max-h-[250px] overflow-y-auto pr-2"
-                    >
-                      {artistTracks.map((track, idx) => (
-                        <div 
-                          key={track.id} 
-                          className="flex items-center gap-4 p-4 rounded-2xl bg-black/20 hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all group cursor-pointer" 
-                          onClick={() => playTrack(track)}
-                        >
-                          <div className="w-8 text-center text-xs font-black text-text-secondary/50 group-hover:text-accent transition-colors">
-                            {idx + 1}
-                          </div>
-                          <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0">
-                            <img src={track.coverUrl} className="w-full h-full object-cover" alt="" />
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <Play size={16} fill="currentColor" className="text-white ml-0.5" />
-                            </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-black tracking-tight truncate text-white group-hover:text-accent transition-colors">{track.title}</div>
-                            <div className="text-[10px] font-bold text-text-secondary opacity-60 tracking-wider uppercase mt-0.5">{track.album || 'Single'}</div>
-                          </div>
-                          <div className="text-xs font-mono font-bold text-text-secondary opacity-60">
-                            {Math.floor(track.duration / 60)}:{(track.duration % 60).toString().padStart(2, '0')}
-                          </div>
-                        </div>
-                      ))}
-                      {artistTracks.length === 0 && (
-                        <div className="py-8 text-center text-text-secondary text-sm font-bold opacity-60">No singles registered for this artist.</div>
-                      )}
-                    </motion.div>
-                  )}
-
-                  {activeSubTab === 'albums' && (
-                    <motion.div 
-                      key="albums"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[250px] overflow-y-auto pr-2"
-                    >
-                      {uniqueAlbums.map((album, idx) => (
-                        <div 
-                          key={idx} 
-                          onClick={() => onNavigateToAlbum?.(album.trackId)}
-                          className="flex items-center gap-4 p-4 rounded-2xl bg-black/20 hover:bg-white/5 border border-white/5 hover:border-accent/30 transition-all group cursor-pointer"
-                        >
-                          <img src={album.coverUrl} className="w-14 h-14 rounded-xl object-cover shadow-lg shrink-0 group-hover:scale-105 transition-transform" alt="" />
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-black tracking-tight truncate text-white group-hover:text-accent transition-colors">{album.name}</h4>
-                            <p className="text-[10px] font-bold text-text-secondary opacity-60 tracking-widest mt-1 uppercase">{album.genre} • {album.year}</p>
-                          </div>
-                          <div className="px-3 py-1.5 rounded-lg bg-accent/10 group-hover:bg-accent text-accent group-hover:text-background text-[9px] font-black uppercase tracking-widest transition-all">
-                            View Album
-                          </div>
-                        </div>
-                      ))}
-                    </motion.div>
-                  )}
-
-                  {activeSubTab === 'playlists' && (
-                    <motion.div 
-                      key="playlists"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[250px] overflow-y-auto pr-2"
-                    >
-                      {customPlaylists.map((pl) => (
-                        <div 
-                          key={pl.id} 
-                          onClick={() => artistTracks.length > 0 && playTrack(artistTracks[0])}
-                          className="flex items-center gap-4 p-4 rounded-2xl bg-black/20 hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all group cursor-pointer"
-                        >
-                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-white/10 to-transparent flex items-center justify-center overflow-hidden shrink-0">
-                            <img src={pl.coverUrl} className="w-full h-full object-cover" alt="" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-black tracking-tight truncate text-white">{pl.name}</h4>
-                            <p className="text-[10px] font-bold text-text-secondary opacity-60 tracking-widest mt-1 uppercase">{pl.tracksCount} Tracks</p>
-                          </div>
-                          <button className="w-8 h-8 rounded-full bg-accent/10 group-hover:bg-accent text-accent group-hover:text-background flex items-center justify-center transition-all">
-                            <Play size={14} fill="currentColor" />
-                          </button>
-                        </div>
-                      ))}
-                    </motion.div>
-                  )}
-
-                  {activeSubTab === 'radio' && (
-                    <motion.div 
-                      key="radio"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="bg-black/30 border border-white/5 p-6 rounded-2xl space-y-6"
-                    >
-                      {/* Interactive Radio Header & Playback */}
-                      <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div className="flex items-center gap-4">
-                          <button 
-                            onClick={() => {
-                              setRadioPlaying(!radioPlaying);
-                              setHypeLevel(prev => Math.min(100, prev + 10));
-                              triggerReaction("📻");
-                            }}
-                            className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${radioPlaying ? 'bg-red-500 text-white animate-pulse' : 'bg-accent text-background hover:scale-105'}`}
-                          >
-                            {radioPlaying ? <Zap className="animate-spin-slow" size={24} /> : <Play fill="currentColor" className="ml-1" size={24} />}
-                          </button>
-                          <div>
-                            <h4 className="text-sm font-black tracking-tight text-white uppercase">Cortex Radio Transmission</h4>
-                            <p className="text-[10px] font-bold text-text-secondary opacity-75 mt-0.5">
-                              {radioPlaying ? "🔴 Broadcasting live synthesis loop..." : "⚪ Ready for radio frequency beam..."}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Sound Vibe Presets Selector */}
-                        <div className="flex gap-2">
-                          {(['concert', 'cyber-club', 'lofi-dome'] as const).map(v => (
-                            <button
-                              key={v}
-                              onClick={() => {
-                                setVibeSelected(v);
-                                setRadioBpm(v === 'concert' ? 124 : v === 'cyber-club' ? 138 : 84);
-                                triggerReaction("⚡");
-                              }}
-                              className={`px-3 py-1 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all ${vibeSelected === v ? 'bg-accent text-background font-extrabold' : 'bg-white/5 text-text-secondary hover:text-white'}`}
-                            >
-                              {v === 'concert' && 'Moshpit'}
-                              {v === 'cyber-club' && 'Cyber Club'}
-                              {v === 'lofi-dome' && 'Lofi Dome'}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Equalizer frequency bar visualizer */}
-                      <div className="h-16 flex items-end gap-1.5 bg-black/20 p-3 rounded-xl border border-white/5 relative overflow-hidden">
-                        {frequencyBars.map((barHeight, idx) => (
-                          <motion.div 
-                            key={idx}
-                            animate={{ height: radioPlaying ? `${barHeight}%` : '20%' }}
-                            transition={{ type: "spring", stiffness: 150, damping: 15 }}
-                            className={`flex-1 rounded-t-md ${radioPlaying ? 'bg-accent' : 'bg-text-secondary/20'}`}
-                            style={{ boxShadow: radioPlaying ? '0 0 10px rgba(191, 193, 194, 0.4)' : 'none' }}
-                          />
-                        ))}
-                      </div>
-
-                      {/* Controls Sliders */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-                        {/* Radio BPM Slider */}
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-text-secondary">
-                            <span>Tuning Tempo</span>
-                            <span className="text-accent">{radioBpm} BPM</span>
-                          </div>
-                          <input 
-                            type="range" 
-                            min="60" 
-                            max="180" 
-                            value={radioBpm}
-                            onChange={(e) => setRadioBpm(parseInt(e.target.value))}
-                            className="w-full accent-accent bg-white/10 rounded-lg appearance-none h-1.5"
-                          />
-                        </div>
-
-                        {/* Crowd Noise Slider */}
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-text-secondary">
-                            <span>Crowd Cheer</span>
-                            <span className="text-accent">{crowdCheerLevel}%</span>
-                          </div>
-                          <input 
-                            type="range" 
-                            min="0" 
-                            max="100" 
-                            value={crowdCheerLevel}
-                            onChange={(e) => {
-                              setCrowdCheerLevel(parseInt(e.target.value));
-                              if (parseInt(e.target.value) > 80) triggerReaction("🙌");
-                            }}
-                            className="w-full accent-accent bg-white/10 rounded-lg appearance-none h-1.5"
-                          />
-                        </div>
-
-                        {/* Toggle Buttons */}
-                        <div className="flex items-center justify-around gap-4 pt-1">
-                          <button 
-                            onClick={() => setBassBoost(!bassBoost)}
-                            className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${bassBoost ? 'bg-accent/10 border border-accent/30 text-accent font-extrabold' : 'bg-white/5 text-text-secondary'}`}
-                          >
-                            Bass Boost
-                          </button>
-                          <button 
-                            onClick={() => {
-                              setReverbActive(!reverbActive);
-                              triggerReaction("⚡");
-                            }}
-                            className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${reverbActive ? 'bg-accent/10 border border-accent/30 text-accent font-extrabold' : 'bg-white/5 text-text-secondary'}`}
-                          >
-                            Reverb Delay
-                          </button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+              <div className="absolute bottom-6 right-8 text-[9px] font-mono text-white/20 tracking-[0.2em]">
+                CORTEX_AI · GENERATED
               </div>
             </div>
           </div>
+        </motion.div>
 
-          {/* Crowd Fan Feed Section */}
-          <div className="bg-surface/30 border border-white/5 rounded-[2rem] p-6 flex flex-col h-[520px] shadow-2xl relative">
-            <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4">
-              <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-                <MessageSquare className="text-accent animate-pulse" size={18} /> Live Crowd Feed
-              </h3>
-              <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-400 text-[8px] font-black uppercase tracking-widest animate-pulse">Online</span>
-            </div>
-
-            {/* Scrollable Chat Message List */}
-            <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-              {chatMessages.map((msg, idx) => (
-                <div key={idx} className="bg-black/20 border border-white/5 rounded-2xl p-3 text-xs leading-relaxed">
-                  <div className="font-black text-accent/80 mb-1 flex items-center justify-between">
-                    <span>{msg.startsWith("You:") ? "You (Vibe Master)" : `Fan_${1000 + idx}`}</span>
-                    <span className="text-[8px] opacity-40 font-mono">Just now</span>
+        {/* ─── ALBUMS ───────────────────────────────────────────────────── */}
+        <div className="max-w-[1400px] mx-auto px-6 md:px-10 lg:px-16 pb-16">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-black tracking-tight flex items-center gap-2.5">
+              <Disc size={20} className="text-accent" /> Albums
+            </h2>
+            <button onClick={() => setShowAllAlbums(!showAllAlbums)} className="flex items-center gap-1 text-xs font-bold text-white/40 hover:text-white transition-colors">
+              {showAllAlbums ? 'Collapse' : 'See all'} <ChevronRight size={14} className={`transition-transform duration-300 ${showAllAlbums ? 'rotate-90' : ''}`} />
+            </button>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {(showAllAlbums ? uniqueAlbums : uniqueAlbums.slice(0, 4)).map((album, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: idx * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                onClick={() => onNavigateToAlbum?.(album.trackId)}
+                className="group cursor-pointer"
+              >
+                <div className="relative w-full aspect-square rounded-2xl overflow-hidden mb-3 shadow-xl bg-white/5">
+                  <img src={album.coverUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="w-11 h-11 rounded-full bg-accent text-background flex items-center justify-center scale-90 group-hover:scale-100 transition-transform duration-200">
+                      <Play fill="currentColor" className="ml-0.5" size={18} />
+                    </div>
                   </div>
-                  <p className="font-medium text-white/95">{msg.replace("You:", "")}</p>
                 </div>
-              ))}
-            </div>
-
-            {/* Chat form input */}
-            <form onSubmit={handleSendChat} className="mt-4 flex gap-2">
-              <input 
-                type="text" 
-                placeholder="Shout into the crowd..." 
-                value={newMsg}
-                onChange={e => setNewMsg(e.target.value)}
-                className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-accent transition-all"
-              />
-              <button type="submit" className="px-4 py-3 bg-accent text-background rounded-xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-transform">
-                Send
-              </button>
-            </form>
+                <h3 className="text-sm font-black tracking-tight truncate group-hover:text-accent transition-colors">{album.name}</h3>
+                <p className="text-[10px] font-bold text-white/35 tracking-widest uppercase mt-1">{album.genre} · {album.year}</p>
+              </motion.div>
+            ))}
           </div>
         </div>
 
-        {/* Live Tour Dates & Interactive Events Schedule */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8">
-          <div className="bg-gradient-to-br from-surface to-background border border-white/5 rounded-[2rem] p-8 shadow-2xl">
-            <h3 className="text-xl font-black tracking-tight mb-6 flex items-center gap-2">
-              <Calendar size={20} className="text-accent" /> Live Cyberpunk World Tour
-            </h3>
-            <div className="space-y-4">
+        {/* ─── CURATED MIXES + RADIO ─────────────────────────────────────── */}
+        <div className="max-w-[1400px] mx-auto px-6 md:px-10 lg:px-16 pb-16 grid grid-cols-1 lg:grid-cols-2 gap-12">
+
+          <div className="flex flex-col">
+            <h2 className="text-2xl font-black tracking-tight flex items-center gap-2.5 mb-6 shrink-0">
+              <Music size={20} className="text-accent" /> Curated Mixes
+            </h2>
+            <div className="space-y-3 flex-1">
+              {customPlaylists.map((pl, idx) => {
+                const isMixPlaying = isPlaying && currentTrack?.album === pl.name;
+                return (
+                  <motion.div
+                    key={pl.id}
+                    initial={{ opacity: 0, x: -16 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: idx * 0.08 }}
+                    onClick={() => {
+                      setCurrentTrack({
+                        id: pl.id,
+                        title: pl.name,
+                        artist: artistName,
+                        album: pl.name,
+                        coverUrl: pl.coverUrl,
+                        duration: 3600,
+                        genre: 'Mix',
+                        mood: 'Continuous',
+                        bpm: 120,
+                        audioUrl: artistTracks[0]?.audioUrl
+                      });
+                      setIsPlaying(true);
+                    }}
+                    className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] hover:border-white/[0.2] transition-all cursor-pointer group"
+                  >
+                    <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 relative shadow-md">
+                      <img src={pl.coverUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <Play fill="currentColor" size={14} className="ml-0.5" />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-black tracking-tight truncate">{pl.name}</h3>
+                      <p className="text-xs text-white/45 mt-0.5 truncate">{pl.description}</p>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <p className="text-[10px] font-bold text-accent tracking-widest uppercase">{pl.tracksCount} Tracks</p>
+                        {isMixPlaying && (
+                          <div className="flex items-end justify-center gap-[2px] h-2">
+                            <motion.div animate={{ height: [2, 6, 2] }} transition={{ repeat: Infinity, duration: 0.8 }} className="w-0.5 bg-accent rounded-full" />
+                            <motion.div animate={{ height: [6, 3, 6] }} transition={{ repeat: Infinity, duration: 0.9 }} className="w-0.5 bg-accent rounded-full" />
+                            <motion.div animate={{ height: [3, 5, 3] }} transition={{ repeat: Infinity, duration: 0.7 }} className="w-0.5 bg-accent rounded-full" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <ChevronRight size={16} className="text-white/20 group-hover:text-white/50 transition-colors shrink-0" />
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex flex-col">
+            <h2 className="text-2xl font-black tracking-tight flex items-center gap-2.5 mb-6 shrink-0">
+              <RadioIcon size={20} className="text-accent" /> Live Radio
+            </h2>
+            <div className={`flex-1 bg-gradient-to-br ${isRadioActive ? 'from-accent/20 to-accent/5 border-accent/30' : 'from-white/8 to-white/[0.02] border-white/8'} p-7 rounded-3xl border relative overflow-hidden group flex flex-col justify-between min-h-[220px] transition-colors duration-500`}>
+              <div className="absolute top-0 right-0 p-6 opacity-[0.06] group-hover:opacity-[0.12] group-hover:scale-110 transition-all duration-500 pointer-events-none">
+                <Zap size={80} className={isRadioActive ? 'text-accent drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]' : ''} />
+              </div>
+              <div>
+                <h3 className="text-lg font-black tracking-tight mb-1.5">Non-Stop {artistName}</h3>
+                <p className="text-sm text-white/45 max-w-xs leading-relaxed">Continuous algorithmic mix exploring similar frequencies, influences, and deep cuts.</p>
+              </div>
+              <button 
+                onClick={toggleRadio}
+                className={`mt-6 self-start px-5 py-2.5 rounded-full font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:scale-105 active:scale-95 transition-all duration-300 ${isRadioActive ? 'bg-accent text-background' : 'bg-white text-black'}`}
+              >
+                {isRadioActive ? (
+                  <>
+                    <Pause size={13} fill="currentColor" /> Stop Station
+                  </>
+                ) : (
+                  <>
+                    <RadioIcon size={13} /> Launch Station
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── FANS ALSO LIKE + COMMENTS ─────────────────────────────────── */}
+        <div className="max-w-[1400px] mx-auto px-6 md:px-10 lg:px-16 pb-16 grid grid-cols-1 lg:grid-cols-2 gap-12 pt-8 border-t border-white/[0.05]">
+
+          <div className="flex flex-col">
+            <h2 className="text-2xl font-black tracking-tight flex items-center gap-2.5 mb-6 shrink-0">
+              <Users size={20} className="text-accent" /> Fans Also Listen To
+            </h2>
+            <div className="grid grid-cols-3 gap-4 flex-1 content-start">
               {[
-                { city: "Neo-Tokyo, JP", venue: "Shibuya Cyberdome", date: "JUL 15", soldOut: true },
-                { city: "Berlin, DE", venue: "Berghain Live Arena", date: "JUL 22", soldOut: true },
-                { city: "London, UK", venue: "Wembley Hyperstage", date: "AUG 05", soldOut: false },
-                { city: "New York, US", venue: "Brooklyn Neon Hangar", date: "AUG 18", soldOut: false }
-              ].map((tour, idx) => (
-                <div key={idx} className="flex items-center justify-between p-4 bg-black/20 border border-white/5 hover:border-accent/20 rounded-2xl transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="text-center bg-accent/10 border border-accent/20 px-3 py-1.5 rounded-xl font-black text-xs text-accent">
-                      {tour.date}
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-black tracking-tight">{tour.city}</h4>
-                      <p className="text-[10px] font-bold text-text-secondary opacity-60 mt-0.5">{tour.venue}</p>
-                    </div>
+                { name: "Kavinsky", img: "https://picsum.photos/seed/kav/400/400", time: "2h ago" },
+                { name: "Daft Punk", img: "https://picsum.photos/seed/daft/400/400", time: "5h ago" },
+                { name: "Justice", img: "https://picsum.photos/seed/justice/400/400", time: "1d ago" },
+              ].map((artist, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: idx * 0.08 }}
+                  className="flex flex-col items-center gap-2.5 p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.06] hover:border-white/[0.14] transition-all cursor-pointer group text-center"
+                >
+                  <div className="w-full aspect-square rounded-full overflow-hidden border-2 border-accent/20 group-hover:border-accent/60 shadow-[0_0_15px_rgba(255,255,255,0.02)] group-hover:shadow-[0_0_20px_rgba(255,255,255,0.1)] mb-1 transition-all duration-500">
+                    <img src={artist.img} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={artist.name} />
                   </div>
-                  {tour.soldOut ? (
-                    <span className="px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-black uppercase tracking-widest">Sold Out</span>
-                  ) : (
-                    <button onClick={() => alert("Redirecting to cyber ticket office...")} className="px-3 py-1.5 rounded-xl bg-accent text-background text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-transform">
-                      Tickets
-                    </button>
-                  )}
-                </div>
+                  <h3 className="text-xs font-black tracking-tight truncate w-full group-hover:text-accent transition-colors">{artist.name}</h3>
+                </motion.div>
               ))}
             </div>
           </div>
 
-          {/* Crowd Fan Wall & Shoutouts */}
-          <div className="bg-gradient-to-br from-surface to-background border border-white/5 rounded-[2rem] p-8 shadow-2xl space-y-6">
-            <h3 className="text-xl font-black tracking-tight flex items-center gap-2">
-              <Sparkles size={20} className="text-accent" /> Special Fan Achievements
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-5 bg-black/20 border border-white/5 rounded-2xl text-center space-y-2">
-                <div className="w-10 h-10 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center mx-auto text-lg">🔥</div>
-                <h4 className="text-xs font-black tracking-tight">Super Fan</h4>
-                <p className="text-[9px] text-text-secondary font-bold opacity-60">Attended 15+ live stream sessions</p>
-              </div>
-              <div className="p-5 bg-black/20 border border-white/5 rounded-2xl text-center space-y-2">
-                <div className="w-10 h-10 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mx-auto text-lg">👑</div>
-                <h4 className="text-xs font-black tracking-tight">Vibe Controller</h4>
-                <p className="text-[9px] text-text-secondary font-bold opacity-60">Overheated stage 5 times</p>
-              </div>
-              <div className="p-5 bg-black/20 border border-white/5 rounded-2xl text-center space-y-2">
-                <div className="w-10 h-10 bg-cyan-500/20 text-cyan-400 rounded-full flex items-center justify-center mx-auto text-lg">⚡</div>
-                <h4 className="text-xs font-black tracking-tight">Laser Master</h4>
-                <p className="text-[9px] text-text-secondary font-bold opacity-60">Activated all stage colors</p>
-              </div>
-              <div className="p-5 bg-black/20 border border-white/5 rounded-2xl text-center space-y-2">
-                <div className="w-10 h-10 bg-purple-500/20 text-purple-400 rounded-full flex items-center justify-center mx-auto text-lg">📣</div>
-                <h4 className="text-xs font-black tracking-tight">Shoutouter</h4>
-                <p className="text-[9px] text-text-secondary font-bold opacity-60">Wrote a live cheer feed comment</p>
-              </div>
+          <div className="flex flex-col">
+            <h2 className="text-2xl font-black tracking-tight flex items-center gap-2.5 mb-6 shrink-0">
+              <MessageSquare size={20} className="text-accent" /> Top Comments
+            </h2>
+            <div className="space-y-3 flex-1">
+              {[
+                { id: 1, user: "NeonRider", text: "This artist literally rewired my brain.", likes: 124, time: "2h ago" },
+                { id: 2, user: "SynthWave_99", text: "The production on the latest album is out of this world.", likes: 89, time: "5h ago" },
+                { id: 3, user: "CyberPunk_2077", text: "Listening to this on a late night drive is an experience.", likes: 56, time: "1d ago" },
+              ].map((comment, idx) => (
+                <motion.div
+                  key={comment.id}
+                  initial={{ opacity: 0, x: 16 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: idx * 0.08 }}
+                  className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-white/[0.1] transition-colors group"
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center text-xs font-black text-accent">
+                        {comment.user.charAt(0)}
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-white/60 mr-2">{comment.user}</span>
+                        <span className="text-[10px] text-white/30 font-mono">{comment.time}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button className="text-[10px] font-bold text-white/20 hover:text-white/60 uppercase tracking-widest transition-colors opacity-0 group-hover:opacity-100">
+                        Reply
+                      </button>
+                      <button className="flex items-center gap-1.5 text-white/25 hover:text-accent transition-colors">
+                        <Heart size={12} />
+                        <span className="text-[10px] font-mono">{comment.likes}</span>
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-sm text-white/75 leading-relaxed">{comment.text}</p>
+                </motion.div>
+              ))}
             </div>
           </div>
+
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
