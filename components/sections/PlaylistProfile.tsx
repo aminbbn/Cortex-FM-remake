@@ -1,43 +1,42 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, Heart, Share2, Disc, Flame, Volume2, Sparkles, MoreHorizontal, Layers, Clock } from 'lucide-react';
+import { Play, Pause, Heart, Share2, Disc, Flame, Volume2, Sparkles, MoreHorizontal, Layers, Clock, List } from 'lucide-react';
 import { useMusic } from '../../context/MusicContext';
 import { TrackDropdown } from '../ui/TrackDropdown';
 
-interface AlbumProfileProps {
-  albumTrackId: string;
+interface PlaylistProfileProps {
+  playlistId: string;
   onBack: () => void;
   onNavigateToArtist?: (artistName: string) => void;
 }
 
-export const AlbumProfile: React.FC<AlbumProfileProps> = ({ albumTrackId, onBack, onNavigateToArtist }) => {
-  const { tracks, setCurrentTrack, setIsPlaying, isPlaying, currentTrack, likedTracks, toggleLikeTrack } = useMusic();
-  const mainTrack = tracks.find(t => t.id === albumTrackId) || tracks[0];
-  const albumTracks = tracks.filter(t => t.album === mainTrack?.album && t.artist === mainTrack?.artist);
+export const PlaylistProfile: React.FC<PlaylistProfileProps> = ({ playlistId, onBack, onNavigateToArtist }) => {
+  const { playlists, setCurrentTrack, setIsPlaying, isPlaying, currentTrack, likedTracks, toggleLikeTrack } = useMusic();
+  const playlist = playlists.find(p => p.id === playlistId);
+  const playlistTracks = playlist?.tracks || [];
 
   const [ratings, setRatings] = useState<Record<string, number>>({});
-  const [showSecrets, setShowSecrets] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const isAlbumPlaying = isPlaying && albumTracks.some(t => t.id === currentTrack?.id);
+  const isPlaylistPlaying = isPlaying && playlistTracks.some(t => t.id === currentTrack?.id);
 
   const playTrack = (track: any) => {
     setCurrentTrack(track);
     setIsPlaying(true);
   };
 
-  const handlePlayAlbum = () => {
-    if (isAlbumPlaying) {
+  const handlePlayPlaylist = () => {
+    if (isPlaylistPlaying) {
       setIsPlaying(false);
-    } else if (albumTracks.length > 0) {
-      if (currentTrack && albumTracks.some(t => t.id === currentTrack.id)) {
+    } else if (playlistTracks.length > 0) {
+      if (currentTrack && playlistTracks.some(t => t.id === currentTrack.id)) {
         setIsPlaying(true);
       } else {
-        playTrack(albumTracks[0]);
+        playTrack(playlistTracks[0]);
       }
     }
   };
@@ -63,7 +62,7 @@ export const AlbumProfile: React.FC<AlbumProfileProps> = ({ albumTrackId, onBack
 
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(`${window.location.origin}/album/${mainTrack?.id}`);
+    navigator.clipboard.writeText(`${window.location.origin}/playlist/${playlist?.id}`);
     setToastMessage("Link copied to clipboard");
     setTimeout(() => setToastMessage(null), 3000);
   };
@@ -75,10 +74,10 @@ export const AlbumProfile: React.FC<AlbumProfileProps> = ({ albumTrackId, onBack
     }));
   };
 
-  if (!mainTrack) return null;
+  if (!playlist) return null;
 
-  const bannerUrl = `https://picsum.photos/seed/${mainTrack.album}-banner/1600/600`;
-  const albumDuration = albumTracks.reduce((acc, t) => acc + t.duration, 0);
+  const bannerUrl = `https://picsum.photos/seed/${playlist.id}-banner/1600/600`;
+  const playlistDuration = playlistTracks.reduce((acc, t) => acc + t.duration, 0);
 
   return (
     <div ref={scrollRef} className="relative overflow-y-auto overflow-x-hidden min-h-screen pb-36 scroll-smooth">
@@ -114,18 +113,18 @@ export const AlbumProfile: React.FC<AlbumProfileProps> = ({ albumTrackId, onBack
             </button>
             <div className="w-px h-4 bg-white/10" />
             <img
-              src={mainTrack.coverUrl}
+              src={playlist.coverUrl}
               alt=""
               className="w-8 h-8 rounded-md object-cover"
             />
-            <span className="text-sm font-black tracking-tight text-white flex-1">
-              {mainTrack.album}
+            <span className="text-sm font-black tracking-tight text-white flex-1 truncate">
+              {playlist.name}
             </span>
             <button
-              onClick={handlePlayAlbum}
+              onClick={handlePlayPlaylist}
               className="w-9 h-9 rounded-full bg-accent text-background flex items-center justify-center hover:scale-105 transition-transform shrink-0"
             >
-              {isAlbumPlaying ? (
+              {isPlaylistPlaying ? (
                 <Pause fill="currentColor" size={14} />
               ) : (
                 <Play fill="currentColor" size={14} className="ml-0.5" />
@@ -135,17 +134,13 @@ export const AlbumProfile: React.FC<AlbumProfileProps> = ({ albumTrackId, onBack
         )}
       </AnimatePresence>
 
-      {/* ─── BANNER + ALBUM HEADER ────────────────────────────────────── */}
+      {/* ─── BANNER + PLAYLIST HEADER ────────────────────────────────────── */}
       <div className="relative w-full">
-        {/* Banner image */}
         <div className="relative w-full h-[280px] md:h-[340px] overflow-hidden">
           <img src={bannerUrl} alt="" className="w-full h-full object-cover" />
-          {/* Dark scrim — stronger at bottom so profile info stays readable */}
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-background/10" />
-          {/* Accent tint layer */}
           <div className="absolute inset-0 bg-accent/10 mix-blend-color" />
 
-          {/* Back button — lives inside banner */}
           <button
             onClick={onBack}
             className="absolute top-5 left-5 md:top-6 md:left-8 flex items-center gap-2 px-3.5 py-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 transition-all text-[10px] font-black tracking-[0.2em] uppercase text-white/80 hover:text-white group"
@@ -156,7 +151,6 @@ export const AlbumProfile: React.FC<AlbumProfileProps> = ({ albumTrackId, onBack
             Back
           </button>
 
-          {/* Share / More — top right */}
           <div className="absolute top-5 right-5 md:top-6 md:right-8 flex items-center gap-2">
             <button
               onClick={handleShare}
@@ -188,10 +182,10 @@ export const AlbumProfile: React.FC<AlbumProfileProps> = ({ albumTrackId, onBack
                     className="absolute right-0 top-full mt-2 w-48 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 p-1"
                   >
                     <button className="w-full text-left px-4 py-2.5 text-xs font-bold text-white/70 hover:bg-white/10 hover:text-white rounded-lg transition-colors">
-                      Add to Playlist
+                      Edit Details
                     </button>
-                    <button className="w-full text-left px-4 py-2.5 text-xs font-bold text-white/70 hover:bg-white/10 hover:text-white rounded-lg transition-colors">
-                      View Credits
+                    <button className="w-full text-left px-4 py-2.5 text-xs font-bold text-red-400 hover:bg-red-500/20 hover:text-red-300 rounded-lg transition-colors">
+                      Delete Playlist
                     </button>
                   </motion.div>
                 )}
@@ -212,19 +206,18 @@ export const AlbumProfile: React.FC<AlbumProfileProps> = ({ albumTrackId, onBack
             >
               <div className="w-32 h-32 md:w-48 md:h-48 rounded-lg overflow-hidden border-4 border-background shadow-2xl group cursor-pointer">
                 <img
-                  src={mainTrack.coverUrl}
-                  alt={mainTrack.album}
+                  src={playlist.coverUrl}
+                  alt={playlist.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                   <Disc className="text-white animate-spin-slow" size={32} />
+                   <List className="text-white" size={32} />
                 </div>
               </div>
             </motion.div>
 
             {/* Name + meta */}
             <div className="flex-1 min-w-0 pb-1 md:pb-3">
-              {/* Type label */}
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -232,10 +225,9 @@ export const AlbumProfile: React.FC<AlbumProfileProps> = ({ albumTrackId, onBack
                 className="flex items-center gap-1.5 text-accent text-[10px] font-black tracking-[0.3em] uppercase mb-2"
               >
                 <Sparkles size={12} />
-                Album Release
+                Playlist
               </motion.div>
 
-              {/* Album name */}
               <motion.h1
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -246,34 +238,34 @@ export const AlbumProfile: React.FC<AlbumProfileProps> = ({ albumTrackId, onBack
                 }}
                 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter leading-tight text-white mb-2 md:mb-4 drop-shadow-lg"
               >
-                {mainTrack.album}
+                {playlist.name}
               </motion.h1>
 
-              {/* Stats row */}
+              <motion.p
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.2 }}
+                className="text-white/60 font-medium mb-3 max-w-xl"
+              >
+                {playlist.description}
+              </motion.p>
+
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.4, delay: 0.3 }}
                 className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-bold text-white/50"
               >
-                <span 
-                   className="flex items-center gap-2 hover:text-white cursor-pointer transition-colors group"
-                   onClick={() => onNavigateToArtist?.(mainTrack.artist)}
-                >
-                  <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(mainTrack.artist)}&background=random&size=64`} alt="" className="w-5 h-5 rounded-full" />
-                  <span className="text-white group-hover:underline">{mainTrack.artist}</span>
-                </span>
-                <span className="w-px h-3 bg-white/10 hidden sm:block" />
                 <span className="flex items-center gap-1.5">
                   <Layers size={12} className="text-accent" />
-                  <span className="text-white">{albumTracks.length}</span>
+                  <span className="text-white">{playlistTracks.length}</span>
                   &nbsp;tracks
                 </span>
                 <span className="w-px h-3 bg-white/10 hidden sm:block" />
                 <span className="flex items-center gap-1.5">
                   <Clock size={12} className="text-accent" />
                   <span className="text-white">
-                    {Math.floor(albumDuration / 60)} min {albumDuration % 60} sec
+                    {Math.floor(playlistDuration / 60)} min {playlistDuration % 60} sec
                   </span>
                 </span>
               </motion.div>
@@ -288,10 +280,10 @@ export const AlbumProfile: React.FC<AlbumProfileProps> = ({ albumTrackId, onBack
             >
               {/* Big play */}
               <button
-                onClick={handlePlayAlbum}
+                onClick={handlePlayPlaylist}
                 className="w-14 h-14 min-w-[3.5rem] min-h-[3.5rem] aspect-square rounded-full bg-accent text-background flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-300 shadow-[0_0_24px_rgba(255,255,255,0.15)] shrink-0"
               >
-                {isAlbumPlaying ? (
+                {isPlaylistPlaying ? (
                   <Pause fill="currentColor" size={22} />
                 ) : (
                   <Play fill="currentColor" size={22} className="ml-1" />
@@ -308,28 +300,26 @@ export const AlbumProfile: React.FC<AlbumProfileProps> = ({ albumTrackId, onBack
       </div>
 
       {/* ─── MAIN CONTENT ───────────────────────────────────────────────── */}
-      <div className="relative z-10 w-full max-w-[1400px] mx-auto px-6 md:px-10 lg:px-16 py-12 grid grid-cols-1 lg:grid-cols-3 gap-12">
-          
-        {/* Immersive interactive Tracks List */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="relative z-10 w-full max-w-[1000px] mx-auto px-6 md:px-10 lg:px-16 py-12">
+        <div className="space-y-6">
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             className="flex items-center gap-2 mb-4"
           >
-             <Disc className="text-accent animate-spin-slow" size={20} /> 
+             <List className="text-accent" size={20} /> 
              <h3 className="text-2xl font-black tracking-tight">Tracklist</h3>
           </motion.div>
 
           <div className="flex flex-col gap-1">
-            {albumTracks.map((track, i) => {
+            {playlistTracks.map((track, i) => {
               const isCurrentlyPlaying = isPlaying && currentTrack?.id === track.id;
               const isLiked = likedTracks.includes(track.id);
 
               return (
                 <motion.div
-                  key={track.id}
+                  key={track.id + '-' + i}
                   initial={{ opacity: 0, y: 10 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
@@ -352,6 +342,8 @@ export const AlbumProfile: React.FC<AlbumProfileProps> = ({ albumTrackId, onBack
                         </>
                       )}
                     </div>
+
+                    <img src={track.coverUrl} className="w-10 h-10 rounded-md object-cover" alt="" />
 
                     <div className="flex-1 min-w-0 pr-4">
                       <h3 className={`text-sm font-bold truncate ${isCurrentlyPlaying ? "text-accent" : "text-white"}`}>
@@ -416,85 +408,15 @@ export const AlbumProfile: React.FC<AlbumProfileProps> = ({ albumTrackId, onBack
                 </motion.div>
               );
             })}
-          </div>
-        </div>
-
-        {/* Interactive Studio Behind-the-Scenes Secrets */}
-        <div className="space-y-6">
-          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-full blur-3xl" />
-            <h3 className="text-lg font-black tracking-tight mb-6 flex items-center gap-2">
-              <Volume2 className="text-accent" /> Album Engineering
-            </h3>
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <div className="flex justify-between text-[10px] font-black tracking-wider uppercase text-white/50">
-                  <span>Acoustic Warmth</span>
-                  <span className="text-accent">96.4%</span>
-                </div>
-                <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-accent rounded-full" style={{ width: '96.4%' }} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-[10px] font-black tracking-wider uppercase text-white/50">
-                  <span>Bass Alignment</span>
-                  <span className="text-accent">88.1%</span>
-                </div>
-                <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-accent rounded-full" style={{ width: '88.1%' }} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-[10px] font-black tracking-wider uppercase text-white/50">
-                  <span>Stereo Soundstage</span>
-                  <span className="text-accent">100% WIDE</span>
-                </div>
-                <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-accent rounded-full" style={{ width: '100%' }} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Liner Notes Toggle and Panel */}
-          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-black tracking-tight">Studio Secrets</h3>
-              <button 
-                onClick={() => setShowSecrets(!showSecrets)}
-                className="text-[10px] font-black tracking-wider text-accent uppercase hover:underline"
-              >
-                {showSecrets ? "Hide" : "Reveal"}
-              </button>
-            </div>
-            <p className="text-xs font-bold text-white/40 leading-relaxed">
-              Unlock exclusive engineering insights, gear lists, and record room diaries directly from the studio session notes.
-            </p>
             
-            <AnimatePresence>
-              {showSecrets && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="pt-4 border-t border-white/5 text-xs text-white space-y-4 overflow-hidden"
-                >
-                  <div className="bg-white/[0.03] p-4 rounded-xl border border-white/5">
-                    <div className="font-black text-accent mb-1.5 uppercase tracking-wider text-[9px]">Recording Secret #1</div>
-                    <p className="font-medium opacity-80 leading-relaxed text-white/70">The main synthesizer line was run through a retro tape deck that was slightly warped, giving it that classic unstable space glow.</p>
-                  </div>
-                  <div className="bg-white/[0.03] p-4 rounded-xl border border-white/5">
-                    <div className="font-black text-accent mb-1.5 uppercase tracking-wider text-[9px]">Live Vibe</div>
-                    <p className="font-medium opacity-80 leading-relaxed text-white/70">Recorded with real background crowd ambiance captured during a live warehouse performance in late October.</p>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {playlistTracks.length === 0 && (
+              <div className="text-center py-12 text-white/40">
+                <p>This playlist is currently empty.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 };
-

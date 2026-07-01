@@ -16,15 +16,15 @@ interface LandingPageProps {
 
 const Marquee: React.FC = () => {
   return (
-    <div className="relative flex overflow-hidden border-y border-white/5 py-6 bg-surface/30 backdrop-blur-sm">
+    <div className="relative flex overflow-hidden border-y border-white/5 py-6 bg-surface/30 backdrop-blur-sm w-full">
       <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background z-10 pointer-events-none" />
       <motion.div 
-        className="flex gap-12 whitespace-nowrap"
+        className="flex whitespace-nowrap min-w-fit"
         animate={{ x: "-50%" }}
-        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
       >
         {[...Array(4)].map((_, i) => (
-          <span key={i} className="flex gap-12 text-xs font-mono font-bold text-accent/50 tracking-[0.2em]">
+          <span key={i} className="flex gap-12 pr-12 text-xs font-mono font-bold text-accent/50 tracking-[0.2em]">
             <span>SPECTRAL GATING</span>
             <span>•</span>
             <span>LIBROSA ENGINE</span>
@@ -48,14 +48,14 @@ const GiantMarquee: React.FC = () => {
   return (
     <div className="relative w-full overflow-hidden py-10 bg-transparent pointer-events-none select-none z-10 opacity-30 mix-blend-overlay">
       <motion.div 
-        className="flex whitespace-nowrap"
+        className="flex whitespace-nowrap min-w-fit"
         animate={{ x: "-50%" }}
         transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
       >
         {[...Array(4)].map((_, i) => (
           <span 
             key={i} 
-            className="text-[12rem] md:text-[20rem] font-black leading-none text-transparent px-10"
+            className="text-[12rem] md:text-[20rem] font-black leading-none text-transparent pr-20"
             style={{ WebkitTextStroke: "2px rgba(255, 255, 255, 0.4)" }}
           >
             NEURAL ARCHITECTURE // ATOMIC ANALYSIS // SONIC EVOLUTION //
@@ -68,75 +68,261 @@ const GiantMarquee: React.FC = () => {
 
 // --- LIVE DASHBOARD VISUALS ---
 
-const PulseVisual: React.FC = () => (
-  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-     {[1, 2, 3].map((i) => (
-      <motion.div
-        key={i}
-        className="absolute border border-accent/20 rounded-full"
-        initial={{ width: 0, height: 0, opacity: 0.8 }}
-        animate={{ width: 400, height: 400, opacity: 0 }}
-        transition={{ duration: 3, repeat: Infinity, delay: i * 1, ease: "easeOut" }}
-      />
-    ))}
-    <div className="w-2 h-2 bg-accent rounded-full shadow-[0_0_20px_rgba(191,193,194,1)] z-10 animate-pulse" />
-  </div>
-);
+const PulseVisual: React.FC = () => {
+  const generateOrbitKeyframes = (rx: number, ry: number, pointsCount = 32, startAngleOffset = 0) => {
+    const xValues = [];
+    const yValues = [];
+    for (let i = 0; i <= pointsCount; i++) {
+      const angle = startAngleOffset + (i / pointsCount) * 2 * Math.PI;
+      xValues.push(200 + rx * Math.cos(angle));
+      yValues.push(110 + ry * Math.sin(angle));
+    }
+    return { xValues, yValues };
+  };
 
-const GhostScrollVisual: React.FC = () => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20 group-hover:opacity-40 transition-opacity duration-500">
-    <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[#1A1C1C] to-transparent z-10" />
-    <motion.div 
-      className="flex flex-col gap-3 p-6"
-      animate={{ y: ["0%", "-50%"] }} 
-      transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-    >
-      {[...Array(2)].map((_, setIndex) => (
-        <React.Fragment key={setIndex}>
-          {[...Array(6)].map((_, i) => (
-            <div key={`${setIndex}-${i}`} className="flex items-center gap-3">
-               <div className="w-8 h-8 rounded bg-white/10 shrink-0" />
-               <div className="flex-1 space-y-2">
-                 <div className="h-1.5 bg-white/10 rounded w-2/3" />
-                 <div className="h-1.5 bg-white/5 rounded w-1/2" />
-               </div>
-            </div>
-          ))}
-        </React.Fragment>
-      ))}
-    </motion.div>
-    <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#1A1C1C] to-transparent z-10" />
+  const orbit1 = generateOrbitKeyframes(140, 55, 32, 0);
+  const orbit2 = generateOrbitKeyframes(90, 35, 32, Math.PI * 0.65);
+  const orbit3 = generateOrbitKeyframes(50, 20, 32, Math.PI * 1.3);
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none flex items-center justify-center">
+      {/* Background soft ambient radial glow */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.05)_0%,transparent_70%)]" />
+      
+      <svg viewBox="0 0 400 220" className="w-full h-full max-w-[480px] opacity-80 group-hover:opacity-100 transition-opacity duration-500">
+        <defs>
+          <radialGradient id="hubGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+
+        {/* 1. Telemetry / Grid elements */}
+        <line x1="40" y1="110" x2="360" y2="110" stroke="rgba(255,255,255,0.02)" strokeWidth="1" />
+        <line x1="200" y1="20" x2="200" y2="200" stroke="rgba(255,255,255,0.02)" strokeWidth="1" />
+
+        {/* 2. Concentric Orbit Lines (3D tilted perspective) */}
+        <ellipse 
+          cx="200" 
+          cy="110" 
+          rx="140" 
+          ry="55" 
+          fill="none" 
+          stroke="rgba(255,255,255,0.04)" 
+          strokeWidth="1" 
+          strokeDasharray="4 6" 
+        />
+        <ellipse 
+          cx="200" 
+          cy="110" 
+          rx="90" 
+          ry="35" 
+          fill="none" 
+          stroke="rgba(255,255,255,0.06)" 
+          strokeWidth="1" 
+          strokeDasharray="3 4" 
+        />
+        <ellipse 
+          cx="200" 
+          cy="110" 
+          rx="50" 
+          ry="20" 
+          fill="none" 
+          stroke="var(--color-accent)" 
+          strokeWidth="1" 
+          strokeOpacity="0.12"
+          strokeDasharray="2 2" 
+        />
+
+        {/* 3. Radial Data Beams / Connecting Streams */}
+        <line x1="200" y1="110" x2="110" y2="70" stroke="var(--color-accent)" strokeWidth="1" strokeOpacity="0.08" strokeDasharray="2 4" />
+        <line x1="200" y1="110" x2="290" y2="150" stroke="var(--color-accent)" strokeWidth="1" strokeOpacity="0.08" strokeDasharray="2 4" />
+        
+        {/* Dynamic connection line to show active sync stream */}
+        <motion.line
+          x1="200"
+          y1="110"
+          x2="200"
+          y2="110"
+          animate={{
+            x2: [200, 60, 200],
+            y2: [110, 110, 110],
+          }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          stroke="var(--color-accent)"
+          strokeWidth="1"
+          strokeOpacity="0.15"
+          strokeDasharray="3 3"
+        />
+
+        {/* 4. Active Traveling Sync Signals (Data packets orbiting core) */}
+        {/* Orbit 1 Node */}
+        <g>
+          <motion.circle
+            r="4"
+            fill="var(--color-accent)"
+            animate={{ cx: orbit1.xValues, cy: orbit1.yValues }}
+            transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+            style={{ filter: "drop-shadow(0 0 6px var(--color-accent))" }}
+          />
+          <motion.circle
+            r="12"
+            fill="var(--color-accent)"
+            animate={{ 
+              cx: orbit1.xValues, 
+              cy: orbit1.yValues,
+              scale: [1, 1.4, 1],
+              opacity: [0.1, 0.25, 0.1]
+            }}
+            transition={{ 
+              cx: { duration: 10, repeat: Infinity, ease: "linear" },
+              cy: { duration: 10, repeat: Infinity, ease: "linear" },
+              scale: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+              opacity: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+            }}
+          />
+        </g>
+
+        {/* Orbit 2 Node */}
+        <g>
+          <motion.circle
+            r="3.5"
+            fill="var(--color-accent)"
+            animate={{ cx: orbit2.xValues, cy: orbit2.yValues }}
+            transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
+            style={{ filter: "drop-shadow(0 0 5px var(--color-accent))" }}
+            opacity="0.9"
+          />
+          <motion.circle
+            r="9"
+            fill="var(--color-accent)"
+            animate={{ 
+              cx: orbit2.xValues, 
+              cy: orbit2.yValues,
+              scale: [1, 1.3, 1],
+              opacity: [0.1, 0.2, 0.1]
+            }}
+            transition={{ 
+              cx: { duration: 7, repeat: Infinity, ease: "linear" },
+              cy: { duration: 7, repeat: Infinity, ease: "linear" },
+              scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
+              opacity: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+            }}
+          />
+        </g>
+
+        {/* Orbit 3 Node */}
+        <g>
+          <motion.circle
+            r="3"
+            fill="var(--color-accent)"
+            animate={{ cx: orbit3.xValues, cy: orbit3.yValues }}
+            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+            style={{ filter: "drop-shadow(0 0 4px var(--color-accent))" }}
+            opacity="0.85"
+          />
+        </g>
+
+        {/* 5. Central Vault Core Hub (Focal point of sync) */}
+        <motion.circle
+          cx="200"
+          cy="110"
+          r="24"
+          fill="url(#hubGlow)"
+          animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.8, 0.5] }}
+          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <circle
+          cx="200"
+          cy="110"
+          r="5.5"
+          fill="var(--color-accent)"
+          style={{ filter: "drop-shadow(0 0 8px var(--color-accent))" }}
+        />
+        <motion.circle
+          cx="200"
+          cy="110"
+          r="14"
+          fill="none"
+          stroke="var(--color-accent)"
+          strokeWidth="1"
+          animate={{ scale: [0.8, 1.8], opacity: [0.7, 0] }}
+          transition={{ duration: 2.2, repeat: Infinity, ease: "easeOut" }}
+        />
+      </svg>
+    </div>
+  );
+};
+
+
+const DailyMixVisual: React.FC = () => (
+  <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity duration-700 flex items-center justify-center">
+    <svg viewBox="0 0 400 200" className="absolute w-[200%] h-full max-w-none mix-blend-screen opacity-50" preserveAspectRatio="none">
+      {[...Array(3)].map((_, i) => {
+        const amp1 = 20 + i * 15;
+        const amp2 = -20 - i * 15;
+        return (
+          <motion.path
+            key={i}
+            fill="transparent"
+            stroke="var(--color-accent)"
+            strokeWidth={1.5 + i * 0.5}
+            strokeOpacity={0.3 + i * 0.2}
+            animate={{
+              d: [
+                `M 0 100 Q 100 ${100 - amp1}, 200 100 T 400 100 T 600 100 T 800 100`,
+                `M 0 100 Q 100 ${100 - amp2}, 200 100 T 400 100 T 600 100 T 800 100`,
+                `M 0 100 Q 100 ${100 - amp1}, 200 100 T 400 100 T 600 100 T 800 100`
+              ],
+              x: [0, -400]
+            }}
+            transition={{
+              d: { duration: 4 + i, repeat: Infinity, ease: "easeInOut" },
+              x: { duration: 3 + i * 1.5, repeat: Infinity, ease: "linear" }
+            }}
+          />
+        );
+      })}
+    </svg>
+    <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />
+    <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-background to-transparent" />
   </div>
 );
 
 const SpectrumVisual: React.FC = () => (
-  <div className="absolute inset-0 flex items-center justify-center gap-1.5 opacity-50 group-hover:opacity-80 transition-opacity duration-500">
-    {[...Array(8)].map((_, i) => (
-      <motion.div 
-        key={i}
-        className="w-4 bg-accent/40 rounded-t-sm backdrop-blur-md"
-        animate={{ height: ["20%", "80%", "30%", "90%", "20%"] }}
-        transition={{ 
-          duration: 0.8, 
-          repeat: Infinity, 
-          repeatType: "reverse", 
-          delay: i * 0.1,
-          ease: "easeInOut" 
-        }}
-      />
-    ))}
+  <div className="absolute inset-0 flex items-end justify-center gap-2 opacity-70 group-hover:opacity-100 transition-opacity duration-500 pb-20">
+    {[...Array(12)].map((_, i) => {
+      const maxH = 45 + Math.sin(i * 0.8) * 25 + Math.cos(i * 1.5) * 15;
+      const minH = 15 + Math.sin(i * 0.5) * 5;
+      
+      return (
+        <motion.div 
+          key={i}
+          className="w-3 bg-accent rounded-t-sm opacity-60"
+          style={{ boxShadow: "0 0 10px var(--color-accent)" }}
+          animate={{ height: [`${minH}%`, `${maxH}%`, `${minH}%`] }}
+          transition={{ 
+            duration: 1.5, 
+            repeat: Infinity, 
+            delay: i * 0.12,
+            ease: "easeInOut" 
+          }}
+        />
+      );
+    })}
   </div>
 );
 
 const ScannerVisual: React.FC = () => (
-  <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-     <Lock size={80} className="text-white/[0.03]" />
+  <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
+     <Lock size={60} className="text-accent/30 mb-4" />
      <motion.div 
-       className="absolute w-full h-[1px] bg-accent/50 shadow-[0_0_15px_rgba(191,193,194,0.5)]"
+       className="absolute w-full h-[2px] bg-accent shadow-[0_0_20px_var(--color-accent)]"
        animate={{ top: ["0%", "100%", "0%"] }}
-       transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+       transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
      />
-     <div className="absolute inset-0 bg-accent/[0.02] animate-pulse" />
+     {/* Grid background to make scanning look cool */}
+     <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:20px_20px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)]" />
   </div>
 );
 
@@ -153,17 +339,17 @@ const BentoCard: React.FC<{
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true, margin: "-50px" }}
     transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
-    className={`group relative overflow-hidden rounded-3xl bg-[#1A1C1C] border border-white/5 hover:border-white/10 transition-colors duration-500 ${className}`}
+    className={`group relative overflow-hidden rounded-3xl bg-surface border border-white/10 hover:border-white/20 transition-all duration-500 shadow-xl ${className}`}
   >
     {visual}
     {/* Content overlay */}
     <div className="relative z-10 p-6 h-full flex flex-col justify-end pointer-events-none">
-       <div className="mb-auto p-3 bg-white/5 w-fit rounded-xl border border-white/5 backdrop-blur-md">
-         {icon}
+       <div className="mb-auto p-3 bg-white/10 w-fit rounded-xl border border-white/10 backdrop-blur-md text-accent">
+          {icon}
        </div>
-       <div className="mt-8 bg-[#1A1C1C]/80 p-4 rounded-2xl border border-white/5 backdrop-blur-md">
-         <h3 className="text-sm font-black uppercase tracking-[0.1em] text-white/90 mb-2">{title}</h3>
-         <div className="text-xs text-text-secondary leading-relaxed font-medium">{children}</div>
+       <div className="mt-8 bg-black/25 dark:bg-black/45 p-4 rounded-2xl border border-white/10 backdrop-blur-sm shadow-lg">
+          <h3 className="text-sm font-black uppercase tracking-[0.1em] text-white/95 mb-2">{title}</h3>
+          <div className="text-xs text-text-secondary leading-relaxed font-semibold">{children}</div>
        </div>
     </div>
     
@@ -195,10 +381,10 @@ const CubeFace: React.FC<{ transform: string; opacity?: number }> = ({ transform
       {/* Center Detail */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="w-16 h-16 border border-white/10 rounded-full flex items-center justify-center">
-           <div className="w-1 h-1 bg-white/50 rounded-full" />
+           <div className="w-1 h-1 bg-accent rounded-full animate-pulse" />
         </div>
-        <div className="absolute w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-        <div className="absolute h-full w-[1px] bg-gradient-to-b from-transparent via-white/20 to-transparent" />
+        <div className="absolute w-full h-[1px] bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
+        <div className="absolute h-full w-[1px] bg-gradient-to-b from-transparent via-accent/30 to-transparent" />
       </div>
       
       {/* ENHANCED SCANNER EFFECT (Infinite Loop, EaseInOut) */}
@@ -213,7 +399,10 @@ const CubeFace: React.FC<{ transform: string; opacity?: number }> = ({ transform
         }}
       >
          {/* The bright scan line */}
-         <div className="absolute bottom-0 w-full h-[2px] bg-white shadow-[0_0_30px_rgba(255,255,255,1)] z-20" />
+         <div 
+           className="absolute bottom-0 w-full h-[2px] bg-accent z-20" 
+           style={{ boxShadow: '0 0 30px var(--color-accent)' }}
+         />
          
          {/* The light ray trail */}
          <div className="absolute bottom-[2px] w-full h-40 bg-gradient-to-t from-accent/30 to-transparent z-10" />
@@ -263,7 +452,10 @@ const Hypercube: React.FC<{ progress: MotionValue<number> }> = ({ progress }) =>
 
         {/* --- INNER CORE (100px - Solid Light) --- */}
         <div className="absolute top-1/2 left-1/2 w-[80px] h-[80px] -ml-[40px] -mt-[40px]" style={{ transformStyle: "preserve-3d" }}>
-            <div className="absolute inset-0 bg-white rounded-lg shadow-[0_0_100px_rgba(255,255,255,0.8)] animate-pulse" />
+            <div 
+              className="absolute inset-0 bg-accent rounded-lg animate-pulse" 
+              style={{ boxShadow: '0 0 100px var(--color-accent)' }}
+            />
              {[
                 { transform: "translateZ(40px)" },
                 { transform: "rotateY(180deg) translateZ(40px)" },
@@ -274,7 +466,7 @@ const Hypercube: React.FC<{ progress: MotionValue<number> }> = ({ progress }) =>
             ].map((style, i) => (
                 <div 
                     key={`inner-${i}`}
-                    className="absolute inset-0 bg-white border border-white" 
+                    className="absolute inset-0 bg-accent border border-accent opacity-90" 
                     style={style} 
                 />
             ))}
@@ -491,7 +683,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
             icon={<Activity size={18} />} 
             className="md:row-span-2" 
             delay={0.2}
-            visual={<GhostScrollVisual />}
+            visual={<DailyMixVisual />}
           >
             Hyper-personalized flows adapting to your circadian rhythm.
           </BentoCard>
@@ -530,8 +722,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
           {/* 1. Background Detail: Crosshairs & Grid */}
           <div className="absolute inset-0 pointer-events-none">
              {/* Crosshairs */}
-             <div className="absolute top-1/2 left-0 w-full h-[1px] bg-white/10" />
-             <div className="absolute left-1/2 top-0 h-full w-[1px] bg-white/10" />
+             <div className="absolute top-1/2 left-0 w-full h-[1px] bg-accent/20" />
+             <div className="absolute left-1/2 top-0 h-full w-[1px] bg-accent/20" />
              
              {/* Subtle Radial Gradient */}
              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0%,transparent_70%)]" />
@@ -551,8 +743,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
               <h2 className="text-6xl md:text-8xl font-black text-white tracking-tighter drop-shadow-[0_0_50px_rgba(0,0,0,1)]">
                 01. INGESTION
               </h2>
-              <div className="mt-4 px-6 py-2 bg-black/60 backdrop-blur-md border border-white/20 inline-block rounded-full shadow-2xl">
-                <p className="text-sm md:text-base font-mono text-white tracking-[0.3em] uppercase font-bold">
+              <div className="mt-4 px-6 py-2 bg-black/75 backdrop-blur-md border border-accent/35 inline-block rounded-full shadow-2xl">
+                <p className="text-sm md:text-base font-mono text-accent tracking-[0.3em] uppercase font-bold">
                   RAW DATA ACQUISITION
                 </p>
               </div>
@@ -566,8 +758,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
               <h2 className="text-6xl md:text-8xl font-black text-white tracking-tighter drop-shadow-[0_0_50px_rgba(0,0,0,1)]">
                 02. DECODE
               </h2>
-               <div className="mt-4 px-6 py-2 bg-black/60 backdrop-blur-md border border-white/20 inline-block rounded-full shadow-2xl">
-                <p className="text-sm md:text-base font-mono text-white tracking-[0.3em] uppercase font-bold">
+               <div className="mt-4 px-6 py-2 bg-black/75 backdrop-blur-md border border-accent/35 inline-block rounded-full shadow-2xl">
+                <p className="text-sm md:text-base font-mono text-accent tracking-[0.3em] uppercase font-bold">
                   VECTOR ANALYSIS
                 </p>
               </div>
@@ -581,8 +773,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
               <h2 className="text-6xl md:text-8xl font-black text-white tracking-tighter drop-shadow-[0_0_50px_rgba(0,0,0,1)]">
                 03. SYNTHESIS
               </h2>
-               <div className="mt-4 px-6 py-2 bg-black/60 backdrop-blur-md border border-white/20 inline-block rounded-full shadow-2xl">
-                <p className="text-sm md:text-base font-mono text-white tracking-[0.3em] uppercase font-bold">
+               <div className="mt-4 px-6 py-2 bg-black/75 backdrop-blur-md border border-accent/35 inline-block rounded-full shadow-2xl">
+                <p className="text-sm md:text-base font-mono text-accent tracking-[0.3em] uppercase font-bold">
                   ADAPTIVE FLOW
                 </p>
               </div>
